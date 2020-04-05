@@ -1,0 +1,49 @@
+$black: #1e1e1e;
+$blue: #569CD6;
+
+$lightThemeBlue: #0451A5;
+
+@font-face {
+  font-family: leckerli-one; 
+  src: url('../fonts/LeckerliOne-Regular.ttf');
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  background: $black;
+}
+
+.light-theme {
+  background: #fff;
+}
+
+#app {
+  font-family: leckerli-one, arial;
+  color: $blue;
+
+  h2 {
+    margin: 20px 0 10px 0;
+    text-align: center;
+    font-size: 50px;
+    // color: #C586C0;
+  }
+  
+  .flex-around {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    font-size: 18px;
+  }
+}
+
+.light-theme {
+  #app {
+    color: $lightThemeBlue;
+  }
+
+  h2 {
+    color: #811F3F;
+  }
+}
