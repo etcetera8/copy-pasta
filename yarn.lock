@@ -217,6 +217,14 @@
     cross-zip "^3.0.0"
     fs-extra "^8.1.0"
 
+"@electron-forge/plugin-auto-unpack-natives@^6.0.0-beta.50":
+  version "6.0.0-beta.50"
+  resolved "https://registry.yarnpkg.com/@electron-forge/plugin-auto-unpack-natives/-/plugin-auto-unpack-natives-6.0.0-beta.50.tgz#9eb4bc471a1d2f1dad969daa82f83f7b0b4fa7c0"
+  integrity sha512-jNtcswsmAna6v2K4W0y2ACgUniP+eu99vZOuPlFwyUIHpDc1iih9wY0X5kGfzyTBAOk2iPAlzEdjMRMdJCX/ZQ==
+  dependencies:
+    "@electron-forge/plugin-base" "6.0.0-beta.50"
+    "@electron-forge/shared-types" "6.0.0-beta.50"
+
 "@electron-forge/plugin-base@6.0.0-beta.50":
   version "6.0.0-beta.50"
   resolved "https://registry.yarnpkg.com/@electron-forge/plugin-base/-/plugin-base-6.0.0-beta.50.tgz#af3f0a84e7b569352e335420bac4efbbaa266db9"
@@ -2234,7 +2242,7 @@ electron-packager@^14.2.0:
     semver "^6.0.0"
     yargs-parser "^16.0.0"
 
-electron-rebuild@^1.8.6:
+electron-rebuild@^1.10.1, electron-rebuild@^1.8.6:
   version "1.10.1"
   resolved "https://registry.yarnpkg.com/electron-rebuild/-/electron-rebuild-1.10.1.tgz#f5cb911586e703fe78e2a0e9f644e7a76f137d97"
   integrity sha512-KSqp0Xiu7CCvKL2aEdPp/vNe2Rr11vaO8eM/wq9gQJTY02UjtAJ3l7WLV7Mf8oR+UJReJO8SWOWs/FozqK8ggA==
