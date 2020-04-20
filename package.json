@@ -1,8 +1,8 @@
 {
-  "name": "pasta",
-  "productName": "Pasta",
+  "name": "copy-pasta",
+  "productName": "Copy Pasta",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "A clipboard history application",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
@@ -12,10 +12,16 @@
     "lint": "eslint --ext .ts ."
   },
   "keywords": [],
-  "author": {
-    "name": "Svet",
-    "email": "svet.93@gmail.com"
-  },
+  "contributors": [
+    {
+      "name": "Svet",
+      "email": "svet.93@gmail.com"
+    },
+    {
+      "name": "Parker",
+      "email": "parker.t.lindley@gmail.com"
+    }
+  ],
   "license": "MIT",
   "config": {
     "forge": {
