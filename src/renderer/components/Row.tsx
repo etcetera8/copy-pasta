@@ -8,14 +8,13 @@ interface RowProps {
   isEven: boolean;
 }
 
-export class Row extends React.Component<RowProps> {
-  render(): React.ReactElement {
+const Row = (props: RowProps): any => {
   const { 
     value,
     handleClick,
     handleDelete,
     isEven
-  } = this.props;
+  } = props;
     return (
         <div
           id={value.id}
@@ -32,5 +31,6 @@ export class Row extends React.Component<RowProps> {
           <button className="delete-btn" onClick={(): void => handleDelete(value.id)}>&#10005;</button>
         </div>
     );
-  }
 }
+
+export default Row;

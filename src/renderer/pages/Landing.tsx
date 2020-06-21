@@ -2,10 +2,8 @@ import React, { Component } from 'react';
 import { observer } from 'mobx-react';
 import { DebounceInput } from 'react-debounce-input';
 import { clipboard, remote, ipcRenderer } from 'electron';
-// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-// @ts-ignore
 import clipboardListener from 'electron-clipboard-extended';
-import { Row } from '../components/Row';
+import Row from '../components/Row';
 import '../styles/landing.scss';
 const dayInMilliseconds = 86400000;
 const hourInMilliseconds = 3600000; // for dev purposes
@@ -29,7 +27,6 @@ class Landing extends Component<any, State> {
   }
 
   componentDidMount(): void {
-    console.log('1')
     this.handleSearch({ target: { value: '' }});
     this.listenForChange();
     this.themeListener();
@@ -60,11 +57,9 @@ class Landing extends Component<any, State> {
   renderLightTheme = (): void => {
     const { classList } = document.body;
     const { lightTheme } = this.props.dataStore;
-    if (lightTheme && !classList.contains('light-theme')) {
-      classList.add('light-theme');
-    } else {
-      classList.remove('light-theme');
-    }
+
+    if (lightTheme && !classList.contains('light-theme')) classList.add('light-theme');
+    else classList.remove('light-theme');
   }
   
   listenForChange = (): void => {
@@ -74,8 +69,7 @@ class Landing extends Component<any, State> {
 
     clipboardListener.on('image-changed', () => {
       const currentImage = clipboardListener.readImage();
-      console.log(currentImage);
-      // do something here?
+      // #TODO: Handle image changes
     });
   }
   
@@ -88,9 +82,8 @@ class Landing extends Component<any, State> {
 
   addToClipboard = (data: any): void => {
     const mostRecent = this.props.dataStore.data[this.props.dataStore.data.length - 1];
-    if (mostRecent.id !== data.id) {
-      this.removeFromHistory(data.id);
-    }
+    if (mostRecent.id !== data.id) this.removeFromHistory(data.id);
+    
     clipboardListener.writeText(data.text);
     ipcRenderer.send('hide');
   }
