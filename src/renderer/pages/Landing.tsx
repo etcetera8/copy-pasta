@@ -114,10 +114,9 @@ class Landing extends Component<IProps, IState> {
     });
   }
 
-  paginateData = (array: any[], pageSize = 13): StoreData[] => {
-    debugger;
-    return array.slice(0, this.state.pageNumber * pageSize)
-  }
+  paginateData = (array: StoreData[], pageSize = 13): StoreData[] => (
+    array.slice(0, this.state.pageNumber * pageSize)
+  )
 
   checkForExpiredHistoryInterval = (): void => {
     this.intervalId = setInterval(() => {
