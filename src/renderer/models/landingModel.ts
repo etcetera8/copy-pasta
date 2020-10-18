@@ -6,7 +6,7 @@ export class LandingModel {
 
   searchTerm = '';
   pageNumber = 1;
-
+  // TODO: Finish this
   paginateData = (array: any, pageSize = PAGE_SIZE): any[] =>
    array.slice(0, this.pageNumber * pageSize);
 }
