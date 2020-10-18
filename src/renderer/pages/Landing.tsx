@@ -5,16 +5,22 @@ import { clipboard, remote, ipcRenderer } from 'electron';
 import clipboardListener from 'electron-clipboard-extended';
 import Row from '../components/Row';
 import '../styles/landing.scss';
+import { InputData, StoreData } from '../types';
+import { DataStore } from '../store/dataStore';
 const dayInMilliseconds = 86400000;
 const hourInMilliseconds = 3600000; // for dev purposes
 
-interface State {
+interface IState {
   success: boolean;
   searchTerm: string;
   pageNumber: number;
 }
 
-class Landing extends Component<any, State> {
+interface IProps {
+  dataStore: DataStore;
+}
+
+class Landing extends Component<IProps, IState> {
   private intervalId?: NodeJS.Timeout
   constructor(props: any) {
       super(props);
@@ -63,10 +69,11 @@ class Landing extends Component<any, State> {
   }
   
   listenForChange = (): void => {
+    // @ts-ignore
     clipboardListener.on('text-changed', () => {
       this.storeCopy();
     });
-
+    // @ts-ignore
     clipboardListener.on('image-changed', () => {
       const currentImage = clipboardListener.readImage();
       // #TODO: Handle image changes
@@ -75,13 +82,14 @@ class Landing extends Component<any, State> {
   
   storeCopy = (): void => {
     const text = clipboard.readText();
-    const copyContent = { text };
+    const copyContent: InputData = { text };
 
     this.props.dataStore.addData(copyContent)
   };
 
-  addToClipboard = (data: any): void => {
-    const mostRecent = this.props.dataStore.data[this.props.dataStore.data.length - 1];
+  addToClipboard = (data: StoreData): void => {
+    const { dataStore } = this.props;
+    const mostRecent = dataStore.data[dataStore.data.length - 1];
     if (mostRecent.id !== data.id) this.removeFromHistory(data.id);
     
     clipboardListener.writeText(data.text);
@@ -100,13 +108,16 @@ class Landing extends Component<any, State> {
       const { searchTerm } = this.state;
       const regEx = new RegExp(searchTerm.toLowerCase());
       const searchResults = this.props.dataStore.data
-        .filter((item: any) => regEx.test(item.searchIndex));
+        .filter((item) => regEx.test(item.searchIndex));
 
       this.props.dataStore.populateSearchResults(searchResults);
     });
   }
 
-  paginateData = (array: any, pageSize = 13): any[] => array.slice(0, this.state.pageNumber * pageSize)
+  paginateData = (array: any[], pageSize = 13): StoreData[] => {
+    debugger;
+    return array.slice(0, this.state.pageNumber * pageSize)
+  }
 
   checkForExpiredHistoryInterval = (): void => {
     this.intervalId = setInterval(() => {

@@ -1,15 +1,29 @@
 import { observable, configure, action } from 'mobx';
 import { create, persist } from 'mobx-persist';
 import dateFormat from 'dateformat';
+import { InputData, StoreData } from '../types';
 const weekMiliseconds = 604800000;
 
 configure({ enforceActions: "observed" });
 const hydrate = create({});
 
-const DataStore: any = observable({
+export interface DataStore {
+  data: StoreData[];
+  searchResults: StoreData[];
+  lightTheme: boolean;
+  addData: (data: InputData) => void;
+  populateSearchResults: (searchResults: StoreData[]) => void;
+  clearData: () => void;
+  removeItem: (id: number) => void;
+  clearExpiredData: () => void;
+  toggleTheme: () => void;
+}
+
+const DataStore: DataStore = observable({
   data: [],
   searchResults: [],
-  addData: action((data: any) => {
+  lightTheme: false,
+  addData: action((data: InputData): void => {
     DataStore.data.push({
       ...data,
       id: Date.now(),
@@ -18,27 +32,26 @@ const DataStore: any = observable({
     });
     DataStore.searchResults = DataStore.data;
   }),
-  populateSearchResults: action((results: any) => {
-    DataStore.searchResults = results
+  populateSearchResults: action((results: StoreData[]) => {
+    DataStore.searchResults = results;
   }),
   clearData: action(() => {
     DataStore.data = [];
     DataStore.searchResults = [];
   }),
   removeItem: action((id: number) => {
-    DataStore.data = DataStore.data.filter((v: any) => v.id !== id);
+    DataStore.data = DataStore.data.filter((v: StoreData) => v.id !== id);
     DataStore.searchResults = DataStore.data;
   }),
   clearExpiredData: action(() => {
     const now = Date.now();
-    const nonExpiredDates = DataStore.data.filter((data: any) => {
+    const nonExpiredDates = DataStore.data.filter((data: StoreData) => {
       const compareDates = (now - data.id) < weekMiliseconds;
       if (compareDates) return data;
     });
     DataStore.data = nonExpiredDates;
     DataStore.searchResults = DataStore.data;
   }),
-  lightTheme: false,
   toggleTheme: action(() => {
     DataStore.lightTheme = !DataStore.lightTheme
   })
