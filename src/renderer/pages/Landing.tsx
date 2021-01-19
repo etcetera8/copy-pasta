@@ -100,6 +100,10 @@ class Landing extends Component<IProps, IState> {
     this.props.dataStore.removeItem(id);
   }
 
+  handlePin = (): void => {
+
+  }
+
   handleSearch = (e: any): void => {
     const { value } = e.target;
     this.setState({
@@ -153,6 +157,7 @@ class Landing extends Component<IProps, IState> {
               key={v.id}
               handleClick={this.addToClipboard}
               handleDelete={this.removeFromHistory}
+              handlePin={this.handlePin}
               isEven={i % 2 === 0}
             />
           )}

@@ -38,8 +38,11 @@
     }
   }
 
+  .pin-btn {
+    width: 60px;
+  }
 
-  .delete-btn {
+  .delete-btn, .pin-btn {
     background: none;
     cursor: pointer;
     border: none;
