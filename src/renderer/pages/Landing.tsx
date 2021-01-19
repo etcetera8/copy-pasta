@@ -134,8 +134,9 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
             <Row
               value={v}
               key={v.id}
-              handleClick={addToClipboard}
-              handleDelete={removeFromHistory}
+              handleClick={this.addToClipboard}
+              handleDelete={this.removeFromHistory}
+              handlePin={this.handlePin}
               isEven={i % 2 === 0}
             />
           )}
