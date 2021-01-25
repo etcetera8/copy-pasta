@@ -100,7 +100,7 @@ class Landing extends Component<IProps, IState> {
     this.props.dataStore.removeItem(id);
   }
 
-  handlePin = (): void => {
+  handlePin = (id: number): void => {
 
   }
 
@@ -151,7 +151,8 @@ class Landing extends Component<IProps, IState> {
             <span className="table-head">Content</span>
             <span className="table-head">Date</span>
           </div>
-          { this.paginateData(this.props.dataStore.searchResults.slice().reverse()).map((v, i) => 
+          { this.paginateData(this.props.dataStore.searchResults.reverse()).map((v, i) => 
+            //filter pinned data first
             <Row
               value={v}
               key={v.id}
@@ -159,6 +160,7 @@ class Landing extends Component<IProps, IState> {
               handleDelete={this.removeFromHistory}
               handlePin={this.handlePin}
               isEven={i % 2 === 0}
+              pinned={this.props.dataStore.pinnedData.find(x => x.id === v.id) ? true : false}
             />
           )}
           <button

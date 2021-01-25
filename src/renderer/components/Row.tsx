@@ -33,6 +33,7 @@ const Row = (props: RowProps): any => {
             {value.text}
           </span>
           <span className="date">{value.date}</span>
+          
           {!pinned && 
             <button className='pin-btn' onClick={(): void => handlePin(value.id)}>
               <img src={pinIcon} alt="pin icon" />
@@ -43,6 +44,7 @@ const Row = (props: RowProps): any => {
               <img src={unpinIcon} alt="pin icon" />
             </button>
           }
+
           <button className="delete-btn" onClick={(): void => handleDelete(value.id)}>&#10005;</button>
         </div>
     );
