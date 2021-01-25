@@ -10,11 +10,13 @@ const hydrate = create({});
 export interface DataStore {
   data: StoreData[];
   searchResults: StoreData[];
+  pinnedData: StoreData[];
   lightTheme: boolean;
   addData: (data: InputData) => void;
   populateSearchResults: (searchResults: StoreData[]) => void;
   clearData: () => void;
   removeItem: (id: number) => void;
+  pinItem: (item: StoreData) => void;
   clearExpiredData: () => void;
   toggleTheme: () => void;
 }
@@ -22,6 +24,7 @@ export interface DataStore {
 const DataStore: DataStore = observable({
   data: [],
   searchResults: [],
+  pinnedData: [],
   lightTheme: false,
   addData: action((data: InputData): void => {
     DataStore.data.push({
@@ -42,6 +45,9 @@ const DataStore: DataStore = observable({
   removeItem: action((id: number) => {
     DataStore.data = DataStore.data.filter((v: StoreData) => v.id !== id);
     DataStore.searchResults = DataStore.data;
+  }),
+  pinItem: action((item: StoreData) => {
+    DataStore.pinnedData = DataStore.pinnedData.push(item);
   }),
   clearExpiredData: action(() => {
     const now = Date.now();

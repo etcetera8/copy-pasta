@@ -134,10 +134,11 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
             <Row
               value={v}
               key={v.id}
-              handleClick={this.addToClipboard}
-              handleDelete={this.removeFromHistory}
-              handlePin={this.handlePin}
+              handleClick={addToClipboard}
+              handleDelete={removeFromHistory}
+              handlePin={handlePin}
               isEven={i % 2 === 0}
+              pinned={dataStore.pinnedData.find(x => x.id === v.id) ? true : false}
             />
           )}
           <button
