@@ -17,4 +17,6 @@ npm install
 npm start
 # Build Production Version
 npm make
+# Navigate to app
+cmd + shift + v, or click icon in nav bar
 ```
