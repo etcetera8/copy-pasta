@@ -93,7 +93,15 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
     dataStore.removeItem(id);
   }
 
-  const handleSearch = (e: any): void => {
+  handlePin = (item: StoreData): void => {
+    if (this.props.dataStore.pinnedData.includes(item)) {
+      this.props.dataStore.unpinData(item.id);
+    } else {
+      this.props.dataStore.pinData(item.id);
+    }
+  }
+
+  handleSearch = (e: any): void => {
     const { value } = e.target;
     setSearchTerm(value);
   }
@@ -130,16 +138,17 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
             <span className="table-head">Content</span>
             <span className="table-head">Date</span>
           </div>
-          {paginateData(dataStore.searchResults.slice().reverse()).map((v, i) => 
-            <Row
-              value={v}
-              key={v.id}
-              handleClick={addToClipboard}
-              handleDelete={removeFromHistory}
-              handlePin={handlePin}
-              isEven={i % 2 === 0}
-              pinned={dataStore.pinnedData.find(x => x.id === v.id) ? true : false}
-            />
+          { this.paginateData(this.props.dataStore.pinnedData.concat(this.props.dataStore.searchResults.filter(v => !this.props.dataStore.pinnedData.includes(v)).reverse()))
+            .map((v, i) => 
+              <Row
+                value={v}
+                key={v.id}
+                handleClick={this.addToClipboard}
+                handleDelete={this.removeFromHistory}
+                handlePin={this.handlePin}
+                isEven={i % 2 === 0}
+                pinned={this.props.dataStore.pinnedData.includes(v)}
+              />
           )}
           <button
             className="btn load-more"

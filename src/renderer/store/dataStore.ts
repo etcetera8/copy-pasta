@@ -16,7 +16,8 @@ export interface DataStore {
   populateSearchResults: (searchResults: StoreData[]) => void;
   clearData: () => void;
   removeItem: (id: number) => void;
-  pinItem: (item: StoreData) => void;
+  pinData: (id: number) => void;
+  unpinData: (id: number) => void;
   clearExpiredData: () => void;
   toggleTheme: () => void;
 }
@@ -46,8 +47,12 @@ const DataStore: DataStore = observable({
     DataStore.data = DataStore.data.filter((v: StoreData) => v.id !== id);
     DataStore.searchResults = DataStore.data;
   }),
-  pinItem: action((item: StoreData) => {
-    DataStore.pinnedData = DataStore.pinnedData.push(item);
+  pinData: action((id: number) => {
+    const itemToPin = DataStore.data.find((v: StoreData) => v.id === id);
+    DataStore.pinnedData.push(itemToPin);
+  }),
+  unpinData: action((id: number) => {
+    DataStore.pinnedData = DataStore.pinnedData.filter(v => v.id !== id);
   }),
   clearExpiredData: action(() => {
     const now = Date.now();
@@ -83,6 +88,15 @@ const DataStoreSchema = {
       searchIndex: true,
     }
   },
+  pinnedData: {
+    type: 'list',
+    schema: {
+      id: true,
+      text: true,
+      date: true,
+      searchIndex: true,
+    }
+  }
 }
 
 export default persist(DataStoreSchema)(DataStore);
