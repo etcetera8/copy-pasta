@@ -101,6 +101,7 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
     }
   }
 
+  //TODO: It's not searching pinned data, only unpinned
   handleSearch = (e: any): void => {
     const { value } = e.target;
     setSearchTerm(value);
@@ -138,17 +139,35 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
             <span className="table-head">Content</span>
             <span className="table-head">Date</span>
           </div>
-          { this.paginateData(this.props.dataStore.pinnedData.concat(this.props.dataStore.searchResults.filter(v => !this.props.dataStore.pinnedData.includes(v)).reverse()))
-            .map((v, i) => 
-              <Row
-                value={v}
-                key={v.id}
-                handleClick={this.addToClipboard}
-                handleDelete={this.removeFromHistory}
-                handlePin={this.handlePin}
-                isEven={i % 2 === 0}
-                pinned={this.props.dataStore.pinnedData.includes(v)}
-              />
+          { this.state.searchTerm && 
+            this.paginateData(
+              this.props.dataStore.searchResults.slice().reverse()).map((v, i) => 
+                <Row
+                  value={v}
+                  key={v.id}
+                  handleClick={this.addToClipboard}
+                  handleDelete={this.removeFromHistory}
+                  handlePin={this.handlePin}
+                  isEven={i % 2 === 0}
+                  pinned={this.props.dataStore.pinnedData.includes(v)}
+                />
+              )
+          }
+          
+          { !this.state.searchTerm && 
+            this.paginateData(
+              this.props.dataStore.pinnedData.concat(
+                this.props.dataStore.unpinnedData)
+              ).map((v, i) => 
+                <Row
+                  value={v}
+                  key={v.id}
+                  handleClick={this.addToClipboard}
+                  handleDelete={this.removeFromHistory}
+                  handlePin={this.handlePin}
+                  isEven={i % 2 === 0}
+                  pinned={this.props.dataStore.pinnedData.includes(v)}
+                />
           )}
           <button
             className="btn load-more"
