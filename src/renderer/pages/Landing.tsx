@@ -101,11 +101,7 @@ class Landing extends Component<IProps, IState> {
   }
 
   handlePin = (item: StoreData): void => {
-    if (this.props.dataStore.pinnedData.includes(item)) {
-      this.props.dataStore.unpinData(item.id);
-    } else {
-      this.props.dataStore.pinData(item.id);
-    }
+    this.props.dataStore.togglePinnedStatus(item);
   }
 
   //TODO: It's not searching pinned data, only unpinned
@@ -166,7 +162,7 @@ class Landing extends Component<IProps, IState> {
                   handleDelete={this.removeFromHistory}
                   handlePin={this.handlePin}
                   isEven={i % 2 === 0}
-                  pinned={this.props.dataStore.pinnedData.includes(v)}
+                  isPinned={this.props.dataStore.pinnedData.includes(v)}
                 />
               )
           }
@@ -183,7 +179,7 @@ class Landing extends Component<IProps, IState> {
                   handleDelete={this.removeFromHistory}
                   handlePin={this.handlePin}
                   isEven={i % 2 === 0}
-                  pinned={this.props.dataStore.pinnedData.includes(v)}
+                  isPinned={this.props.dataStore.pinnedData.includes(v)}
                 />
           )}
           <button

@@ -17,9 +17,8 @@ export interface DataStore {
   populateSearchResults: (searchResults: StoreData[]) => void;
   clearData: () => void;
   removeItem: (id: number) => void;
-  pinData: (id: number) => void;
-  unpinData: (id: number) => void;
   clearExpiredData: () => void;
+  togglePinnedStatus: (item: StoreData) => void;
   toggleTheme: () => void;
 }
 
@@ -49,21 +48,19 @@ const DataStore: DataStore = observable({
     DataStore.data = DataStore.data.filter((v: StoreData) => v.id !== id);
     DataStore.unpinnedData = DataStore.data;
   }),
-  pinData: action((id: number) => {
-    const itemToPin = DataStore.data.find((v: StoreData) => v.id === id);
-    DataStore.pinnedData.push(itemToPin);
+  togglePinnedStatus: action((item: StoreData) => {
+    if (DataStore.unpinnedData.find((v: StoreData) => v === item)) {
+      DataStore.pinnedData.push(item);
     
-    const index = DataStore.unpinnedData.indexOf(itemToPin);
-    console.log(DataStore.pinnedData, DataStore.unpinnedData);
-    index > -1 ?
-      DataStore.unpinnedData.splice(index, 1) :
-      null;
-  }),
-  unpinData: action((id: number) => {
-    DataStore.pinnedData = DataStore.pinnedData.filter(v => v.id !== id);
+      const index = DataStore.unpinnedData.indexOf(item);
+      index > -1 ?
+        DataStore.unpinnedData.splice(index, 1) :
+        null;
+    } else {
+      DataStore.pinnedData = DataStore.pinnedData.filter(v => v.id !== item.id);
 
-    const itemToUnpin = DataStore.data.find((v: StoreData) => v.id === id);
-    DataStore.unpinnedData.push(itemToUnpin);
+      DataStore.unpinnedData.push(item);
+    }
   }),
   clearExpiredData: action(() => {
     const now = Date.now();
