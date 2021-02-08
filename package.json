@@ -130,6 +130,7 @@
     "react": "^16.13.1",
     "react-debounce-input": "^3.2.2",
     "react-dom": "^16.13.1",
-    "robotjs": "^0.6.0"
+    "robotjs": "^0.6.0",
+    "svg-url-loader": "^7.1.1"
   }
 }
