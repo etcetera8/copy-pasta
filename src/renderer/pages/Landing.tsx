@@ -1,77 +1,71 @@
-import React, { Component } from 'react';
-import { observer } from 'mobx-react';
-import { DebounceInput } from 'react-debounce-input';
-import { clipboard, remote, ipcRenderer } from 'electron';
+import { clipboard, ipcRenderer, remote } from 'electron';
 import clipboardListener from 'electron-clipboard-extended';
+import { observer } from 'mobx-react';
+import React, { FC, useEffect, useState } from 'react';
+import { DebounceInput } from 'react-debounce-input';
 import Row from '../components/Row';
+import { DAY_IN_MILLISECONDS } from "../constants";
+import { DataStore } from '../store/dataStore';
 import '../styles/landing.scss';
 import { InputData, StoreData } from '../types';
-import { DataStore } from '../store/dataStore';
-const dayInMilliseconds = 86400000;
-const hourInMilliseconds = 3600000; // for dev purposes
-
-interface IState {
-  success: boolean;
-  searchTerm: string;
-  pageNumber: number;
-}
 
 interface IProps {
   dataStore: DataStore;
 }
 
-class Landing extends Component<IProps, IState> {
-  private intervalId?: NodeJS.Timeout
-  constructor(props: any) {
-      super(props);
-      this.state = {
-        success: false,
-        searchTerm: '',
-        pageNumber: 1,
-      }
-      this.intervalId = undefined;
-  }
+export const Landing: FC<IProps>= observer(({ dataStore }) => {
+  const  [intervalId, setIntervalId] = useState<NodeJS.Timeout>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [pageNumber, setPageNumber] = useState<number>(1);
 
-  componentDidMount(): void {
-    this.handleSearch({ target: { value: '' }});
-    this.listenForChange();
-    this.themeListener();
-    this.checkForExpiredHistoryInterval();
-    this.props.dataStore.clearExpiredData();
-    document.addEventListener('keydown', this.escapeListener, false);
+  useEffect(() => {
+    handleSearch({ target: { value: '' }});
+    listenForChange();
+    themeListener();
+    checkForExpiredHistoryInterval();
+    dataStore.clearExpiredData();
+    document.addEventListener('keydown', escapeListener, false);
     clipboardListener.startWatching();
-    window.setTimeout(() => this.renderLightTheme(), .1);
-  }
+    window.setTimeout(() => renderLightTheme(), .1);
 
-  componentWillUnmount(): void {
-    clipboardListener.stopWatching();
-    document.removeEventListener('keydown', this.escapeListener, false);
-    if (this.intervalId) clearInterval(this.intervalId);
-  }
+    return () => {
+      clipboardListener.stopWatching();
+      document.removeEventListener('keydown', escapeListener, false);
+      if (intervalId) clearInterval(intervalId);
+    }
+  }, [])
 
-  escapeListener = (event: KeyboardEvent): void => {
+  useEffect(() => {
+    const regEx = new RegExp(searchTerm.toLowerCase());
+    const searchResults = dataStore.data
+      .filter((item) => regEx.test(item.searchIndex));
+
+    dataStore.populateSearchResults(searchResults);
+  }, [searchTerm]);
+
+  const escapeListener = (event: KeyboardEvent): void => {
     if (event.keyCode === 27) remote.getCurrentWindow().hide();
   }
 
-  themeListener = (): void => {
+  const themeListener = (): void => {
     ipcRenderer.on('toggleTheme', () => {
-      this.props.dataStore.toggleTheme();
-      this.renderLightTheme();
+      dataStore.toggleTheme();
+      renderLightTheme();
     });
   }
 
-  renderLightTheme = (): void => {
+  const renderLightTheme = (): void => {
     const { classList } = document.body;
-    const { lightTheme } = this.props.dataStore;
+    const { lightTheme } = dataStore;
 
     if (lightTheme && !classList.contains('light-theme')) classList.add('light-theme');
     else classList.remove('light-theme');
   }
   
-  listenForChange = (): void => {
+  const listenForChange = (): void => {
     // @ts-ignore
     clipboardListener.on('text-changed', () => {
-      this.storeCopy();
+      storeCopy();
     });
     // @ts-ignore
     clipboardListener.on('image-changed', () => {
@@ -80,52 +74,41 @@ class Landing extends Component<IProps, IState> {
     });
   }
   
-  storeCopy = (): void => {
+  const storeCopy = (): void => {
     const text = clipboard.readText();
     const copyContent: InputData = { text };
 
-    this.props.dataStore.addData(copyContent)
+    dataStore.addData(copyContent)
   };
 
-  addToClipboard = (data: StoreData): void => {
-    const { dataStore } = this.props;
+  const addToClipboard = (data: StoreData): void => {
     const mostRecent = dataStore.data[dataStore.data.length - 1];
-    if (mostRecent.id !== data.id) this.removeFromHistory(data.id);
+    if (mostRecent.id !== data.id) removeFromHistory(data.id);
     
     clipboardListener.writeText(data.text);
     ipcRenderer.send('hide');
   }
 
-  removeFromHistory = (id: number): void => {
-    this.props.dataStore.removeItem(id);
+  const removeFromHistory = (id: number): void => {
+    dataStore.removeItem(id);
   }
 
-  handleSearch = (e: any): void => {
+  const handleSearch = (e: any): void => {
     const { value } = e.target;
-    this.setState({
-      searchTerm: value,
-    }, () => {
-      const { searchTerm } = this.state;
-      const regEx = new RegExp(searchTerm.toLowerCase());
-      const searchResults = this.props.dataStore.data
-        .filter((item) => regEx.test(item.searchIndex));
-
-      this.props.dataStore.populateSearchResults(searchResults);
-    });
+    setSearchTerm(value);
   }
 
-  paginateData = (array: StoreData[], pageSize = 13): StoreData[] => (
-    array.slice(0, this.state.pageNumber * pageSize)
+  const paginateData = (array: StoreData[], pageSize = 13): StoreData[] => (
+    array.slice(0, pageNumber * pageSize)
   )
 
-  checkForExpiredHistoryInterval = (): void => {
-    this.intervalId = setInterval(() => {
-      this.props.dataStore.clearExpiredData();
-    }, dayInMilliseconds)
+  const checkForExpiredHistoryInterval = (): void => {
+    setIntervalId(setInterval(() => {
+      dataStore.clearExpiredData();
+    }, DAY_IN_MILLISECONDS))
   }
 
-  render(): React.ReactElement {
-    return(
+  return(
       <main>
         <h2>Copy Pasta</h2>
 
@@ -137,41 +120,36 @@ class Landing extends Component<IProps, IState> {
             className="search"
             type="text"
             placeholder="Search"
-            onChange={this.handleSearch}
-            value={this.state.searchTerm}
+            onChange={handleSearch}
+            value={searchTerm}
           />
-          <button className="btn" onClick={this.props.dataStore.clearData}>Clear All</button>
+          <button className="btn" onClick={dataStore.clearData}>Clear All</button>
         </section>
         <section className="row-wrap">
           <div className="flex-around" style={{ height: 40 }}>
             <span className="table-head">Content</span>
             <span className="table-head">Date</span>
           </div>
-          { this.paginateData(this.props.dataStore.searchResults.slice().reverse()).map((v, i) => 
+          {paginateData(dataStore.searchResults.slice().reverse()).map((v, i) => 
             <Row
               value={v}
               key={v.id}
-              handleClick={this.addToClipboard}
-              handleDelete={this.removeFromHistory}
+              handleClick={addToClipboard}
+              handleDelete={removeFromHistory}
               isEven={i % 2 === 0}
             />
           )}
           <button
             className="btn load-more"
-            onClick={(): void => {
-              this.setState((prevState) => ({
-                pageNumber: prevState.pageNumber + 1,
-              }));
-            }}
-          >Show More
+            onClick={(): void => setPageNumber(pageNumber + 1)}
+          >
+            Show More
           </button>
         </section>
       </main>
     )
   }
-}
-
-export default observer(Landing); 
+)
 
 
 
