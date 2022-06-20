@@ -17,10 +17,10 @@ const createWindow = (): void => {
       devTools: true,
     },
     frame: false,
-    fullscreenable: false,
+    fullscreenable: true,
     center: true,
-    movable: false,
-    resizable: false,
+    movable: true,
+    resizable: true,
     show: false,
   });
 
@@ -43,13 +43,13 @@ const createWindow = (): void => {
       }
     },
     { type: 'separator' },
-    // {
-    //   label: 'Toggle Developer Tools',
-    //   accelerator: 'Alt+Command+I',
-    //   click: (): void => {
-    //     mainWindow.webContents.openDevTools();
-    //   }
-    // },
+    {
+      label: 'Toggle Developer Tools',
+      accelerator: 'Alt+Command+I',
+      click: (): void => {
+        mainWindow.webContents.openDevTools();
+      }
+    },
     { type: 'separator' },
     {
       label: 'Quit',
@@ -98,6 +98,3 @@ app.on('activate', (): void => {
     createWindow();
   }
 });
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
