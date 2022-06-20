@@ -37,7 +37,7 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
 
   useEffect(() => {
     const regEx = new RegExp(searchTerm.toLowerCase());
-    const searchResults = dataStore.data
+    const searchResults = dataStore.data.concat(dataStore.pinnedData)
       .filter((item) => regEx.test(item.searchIndex));
 
     dataStore.populateSearchResults(searchResults);
@@ -93,16 +93,16 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
     dataStore.removeItem(id);
   }
 
-  handlePin = (item: StoreData): void => {
-    if (this.props.dataStore.pinnedData.includes(item)) {
-      this.props.dataStore.unpinData(item.id);
+  const handlePin = (item: StoreData): void => {
+    if (dataStore.pinnedData.includes(item)) {
+      dataStore.unpinData(item.id);
     } else {
-      this.props.dataStore.pinData(item.id);
+      dataStore.pinData(item.id);
     }
   }
 
-  //TODO: It's not searching pinned data, only unpinned
-  handleSearch = (e: any): void => {
+  //TODO: Move up out of component
+  const handleSearch = (e: any): void => {
     const { value } = e.target;
     setSearchTerm(value);
   }
@@ -139,35 +139,41 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
             <span className="table-head">Content</span>
             <span className="table-head">Date</span>
           </div>
-          { this.state.searchTerm && 
-            this.paginateData(
-              this.props.dataStore.searchResults.slice().reverse()).map((v, i) => 
-                <Row
-                  value={v}
-                  key={v.id}
-                  handleClick={this.addToClipboard}
-                  handleDelete={this.removeFromHistory}
-                  handlePin={this.handlePin}
-                  isEven={i % 2 === 0}
-                  pinned={this.props.dataStore.pinnedData.includes(v)}
-                />
+          {searchTerm && 
+            paginateData(
+              dataStore.searchResults.slice().reverse()).map((v, i) => {
+                return (
+                  <Row
+                    value={v}
+                    key={v.id}
+                    handleClick={addToClipboard}
+                    handleDelete={removeFromHistory}
+                    handlePin={handlePin}
+                    isEven={i % 2 === 0}
+                    pinned={dataStore.pinnedData.includes(v)}
+                  />
+                );
+              }
               )
           }
           
-          { !this.state.searchTerm && 
-            this.paginateData(
-              this.props.dataStore.pinnedData.concat(
-                this.props.dataStore.unpinnedData)
-              ).map((v, i) => 
-                <Row
-                  value={v}
-                  key={v.id}
-                  handleClick={this.addToClipboard}
-                  handleDelete={this.removeFromHistory}
-                  handlePin={this.handlePin}
-                  isEven={i % 2 === 0}
-                  pinned={this.props.dataStore.pinnedData.includes(v)}
-                />
+          {!searchTerm && 
+            paginateData(
+              dataStore.pinnedData.concat(
+                dataStore.unpinnedData)
+              ).map((v, i) => {
+                return (
+                  <Row
+                    value={v}
+                    key={v.id}
+                    handleClick={addToClipboard}
+                    handleDelete={removeFromHistory}
+                    handlePin={handlePin}
+                    isEven={i % 2 === 0}
+                    pinned={dataStore.pinnedData.includes(v)}
+                  />
+                  )
+              }
           )}
           <button
             className="btn load-more"

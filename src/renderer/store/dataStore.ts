@@ -44,6 +44,8 @@ const DataStore: DataStore = observable({
   clearData: action(() => {
     DataStore.data = [];
     DataStore.searchResults = [];
+    DataStore.pinnedData = [];
+    DataStore.unpinnedData = [];
   }),
   removeItem: action((id: number) => {
     DataStore.data = DataStore.data.filter((v: StoreData) => v.id !== id);
