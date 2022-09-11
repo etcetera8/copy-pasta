@@ -1,4 +1,5 @@
-import { app, BrowserWindow, Menu, Tray, globalShortcut, ipcMain } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, ipcRenderer, Menu, Tray } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import robot from 'robotjs';
 declare const MAIN_WINDOW_WEBPACK_ENTRY: any;
@@ -67,7 +68,28 @@ const createWindow = (): void => {
   globalShortcut.register('CommandOrControl+Shift+V', (): void => {
     mainWindow.show();
   })
+  
+  //#region auto-updater
+  const version = document.getElementById('version');
+  
+  ipcRenderer.send('app_version');
+  ipcRenderer.on('app_version', (event, arg) => {
+    ipcRenderer.removeAllListeners('app_version');
+    version.innerText = 'Version ' + arg.version;
+  });
+  
+  mainWindow.once('ready-to-show', () => {
+    autoUpdater.checkForUpdatesAndNotify();
+  })
+
+  autoUpdater.on('update-available', () => {
+    mainWindow.webContents.send('update_available');
+  });autoUpdater.on('update-downloaded', () => {
+    mainWindow.webContents.send('update_downloaded');
+  });
+  //#endregion
 };
+
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
