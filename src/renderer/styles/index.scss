@@ -1,10 +1,7 @@
-$black: #1e1e1e;
-$blue: #569CD6;
-
-$lightThemeBlue: #0451A5;
+@use '../../shared/styles/tokens' as t;
 
 @font-face {
-  font-family: leckerli-one; 
+  font-family: leckerli-one;
   src: url('../fonts/LeckerliOne-Regular.ttf');
 }
 
@@ -12,7 +9,7 @@ body {
   margin: 0;
   padding: 0;
   height: 100vh;
-  background: $black;
+  background: t.$black;
   // The list is sized to fit, so the document itself must never scroll --
   // scrolling is what used to drag the list border under the fixed footer.
   overflow: hidden;
@@ -37,7 +34,7 @@ main {
 
 #root {
   font-family: leckerli-one, arial;
-  color: $blue;
+  color: t.$blue;
 
   h2 {
     margin: 20px 0 10px 0;
@@ -45,7 +42,7 @@ main {
     font-size: 50px;
     // color: #C586C0;
   }
-  
+
   .flex-around {
     display: flex;
     justify-content: space-around;
@@ -56,10 +53,10 @@ main {
 
 .light-theme {
   #app {
-    color: $lightThemeBlue;
+    color: t.$light-blue;
   }
 
   h2 {
-    color: #811F3F;
+    color: t.$light-maroon;
   }
 }

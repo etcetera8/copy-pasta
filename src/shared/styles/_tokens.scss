@@ -1,0 +1,24 @@
+// Copy Pasta's palette, shared by the Electron renderer and the landing page.
+//
+// These values were duplicated by hand across index.scss and landing.scss.
+// They live here now so the app and the marketing page cannot drift apart.
+//
+// Variables only. `@font-face` belongs in the consuming stylesheet: Sass does
+// not rebase relative url() paths out of a partial, so a font path written
+// here would be correct for one consumer and broken for the other.
+
+// Dark theme (default)
+$black: #1e1e1e;
+$blue: #569CD6;
+$green: #B5CEA8;
+$purple: #C586C0;
+
+// Light theme
+$light-bg: #fff;
+$light-blue: #0451A5;
+$light-maroon: #811F3F;
+$light-amber: #CD9731;
+
+// Type
+$font-display: leckerli-one;
+$font-body: abeezee;
