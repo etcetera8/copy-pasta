@@ -66,11 +66,12 @@ $blue: #569CD6;
 $green: #B5CEA8;
 $purple: #C586C0;
 
-// Light theme
-$light-bg: #fff;
-$light-blue: #0451A5;
-$light-maroon: #811F3F;
-$light-amber: #CD9731;
+// Light theme. The `light-theme-` prefix means "the light theme's", not
+// "a lighter shade of" -- $light-theme-blue is in fact darker than $blue.
+$light-theme-bg: #fff;
+$light-theme-blue: #0451A5;
+$light-theme-maroon: #811F3F;
+$light-theme-amber: #CD9731;
 
 // Type
 $font-display: leckerli-one;
@@ -97,7 +98,7 @@ $lightThemeBlue: #0451A5;
 Replace exactly that with:
 
 ```scss
-@use '../../shared/styles/tokens' as t;
+@use '../../shared/styles/tokens';
 
 @font-face {
   font-family: leckerli-one;
@@ -106,10 +107,10 @@ Replace exactly that with:
 ```
 
 Then update the references further down the same file:
-- `background: $black;` becomes `background: t.$black;`
-- `color: $blue;` becomes `color: t.$blue;`
-- `color: $lightThemeBlue;` becomes `color: t.$light-blue;`
-- `color: #811F3F;` becomes `color: t.$light-maroon;`
+- `background: $black;` becomes `background: tokens.$black;`
+- `color: $blue;` becomes `color: tokens.$blue;`
+- `color: $lightThemeBlue;` becomes `color: tokens.$light-theme-blue;`
+- `color: #811F3F;` becomes `color: tokens.$light-theme-maroon;`
 
 - [ ] **Step 3: Point landing.scss at the tokens**
 
@@ -124,15 +125,15 @@ Then update the references further down the same file:
 Replace those three lines with:
 
 ```scss
-@use '../../shared/styles/tokens' as t;
+@use '../../shared/styles/tokens';
 ```
 
 Then update every reference in the file:
-- `$blue` becomes `t.$blue` (appears in `.table-head`, `.search`)
-- `$green` becomes `t.$green` (appears in `.btn`, `.delete-btn, .pin-btn`)
-- `$black` becomes `t.$black` (appears in `.btn`)
-- `color: #811F3F;` becomes `color: t.$light-maroon;` (appears twice, in `.delete-btn` and `.table-head` under `.light-theme`)
-- `#CD9731` becomes `t.$light-amber` (appears four times in the `.light-theme .btn` and `.light-theme .search` blocks)
+- `$blue` becomes `tokens.$blue` (appears in `.table-head`, `.search`)
+- `$green` becomes `tokens.$green` (appears in `.btn`, `.delete-btn, .pin-btn`)
+- `$black` becomes `tokens.$black` (appears in `.btn`)
+- `color: #811F3F;` becomes `color: tokens.$light-theme-maroon;` (appears twice, in `.delete-btn` and `.table-head` under `.light-theme`)
+- `#CD9731` becomes `tokens.$light-theme-amber` (appears four times in the `.light-theme .btn` and `.light-theme .search` blocks)
 
 - [ ] **Step 4: Verify the app still builds and tests pass**
 
@@ -570,7 +571,7 @@ tray icon, too small to scale up. It still serves as the favicon."
 Create `site/styles/site.scss`:
 
 ```scss
-@use '../../src/shared/styles/tokens' as t;
+@use '../../src/shared/styles/tokens';
 
 // Paths are relative to this file, which is what Sass and Vite both expect.
 // The fonts are not duplicated into site/ -- there is one copy in the repo.
@@ -594,9 +595,9 @@ Create `site/styles/site.scss`:
 
 body {
   margin: 0;
-  background: t.$black;
-  color: t.$blue;
-  font-family: t.$font-body, system-ui, sans-serif;
+  background: tokens.$black;
+  color: tokens.$blue;
+  font-family: tokens.$font-body, system-ui, sans-serif;
   line-height: 1.6;
 }
 
@@ -618,28 +619,28 @@ main {
   }
 
   &__steam {
-    stroke: t.$green;
+    stroke: tokens.$green;
     opacity: 0.65;
   }
 
   &__noodles {
-    stroke: t.$green;
+    stroke: tokens.$green;
   }
 
   &__bowl {
-    fill: t.$blue;
+    fill: tokens.$blue;
   }
 
   &__base {
-    stroke: t.$blue;
+    stroke: tokens.$blue;
   }
 
   &__title {
-    font-family: t.$font-display, cursive;
+    font-family: tokens.$font-display, cursive;
     font-size: clamp(56px, 12vw, 88px);
     font-weight: 400;
     margin: 8px 0 0;
-    color: t.$purple;
+    color: tokens.$purple;
   }
 
   &__tagline {
@@ -678,22 +679,22 @@ main {
   transition: all 0.2s;
 
   &--primary {
-    color: t.$green;
+    color: tokens.$green;
 
     &:hover,
     &:focus-visible {
-      background: t.$green;
-      color: t.$black;
+      background: tokens.$green;
+      color: tokens.$black;
     }
   }
 
   &--secondary {
-    color: t.$light-amber;
+    color: tokens.$light-theme-amber;
 
     &:hover,
     &:focus-visible {
-      background: t.$light-amber;
-      color: t.$black;
+      background: tokens.$light-theme-amber;
+      color: tokens.$black;
     }
   }
 }
@@ -712,11 +713,11 @@ main {
   padding: 24px;
 
   h3 {
-    font-family: t.$font-display, cursive;
+    font-family: tokens.$font-display, cursive;
     font-weight: 400;
     font-size: 26px;
     margin: 0 0 8px;
-    color: t.$green;
+    color: tokens.$green;
   }
 
   p {
@@ -726,7 +727,7 @@ main {
 
   code {
     font-size: 13px;
-    color: t.$light-amber;
+    color: tokens.$light-theme-amber;
     word-break: break-all;
   }
 }
@@ -741,7 +742,7 @@ kbd {
   font-family: inherit;
   font-size: 0.9em;
   text-align: center;
-  color: t.$green;
+  color: tokens.$green;
 }
 
 // --- How it works -------------------------------------------------------
@@ -752,11 +753,11 @@ kbd {
   text-align: center;
 
   &__title {
-    font-family: t.$font-display, cursive;
+    font-family: tokens.$font-display, cursive;
     font-weight: 400;
     font-size: 34px;
     margin: 0 0 28px;
-    color: t.$purple;
+    color: tokens.$purple;
   }
 
   &__steps {
@@ -783,8 +784,8 @@ kbd {
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: t.$green;
-    color: t.$black;
+    background: tokens.$green;
+    color: tokens.$black;
     font-weight: bold;
     flex-shrink: 0;
   }
@@ -800,7 +801,7 @@ kbd {
   opacity: 0.75;
 
   a {
-    color: t.$green;
+    color: tokens.$green;
   }
 
   &__dot {

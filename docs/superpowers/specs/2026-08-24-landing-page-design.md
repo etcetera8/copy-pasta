@@ -76,9 +76,17 @@ and `src/renderer/styles/landing.scss`. The palette moves to a new partial:
 src/shared/styles/_tokens.scss
 ```
 
-`index.scss`, `landing.scss`, and `site/styles/site.scss` all `@use` it. `src/shared/` is the
-existing home for things both sides of the process boundary depend on, so it is the consistent
-place for this.
+`index.scss`, `landing.scss`, `version.scss`, and `site/styles/site.scss` all `@use` it.
+
+`src/shared/` is chosen because it is the existing home for code shared across **build targets**.
+Note this is a different sharing axis than `src/shared/types.ts`, which crosses the main/renderer
+*process* boundary — the main process has no styles at all. The directory now carries both
+meanings; the `styles/` subdirectory keeps them from mixing.
+
+`row.scss` is deliberately **not** converted. It needs palette decisions outside this work's scope:
+it declares `$yellow: #D7BA7D` (absent from the partial), inlines `rgba(86, 156, 214, .4)` which is
+`$blue` at 40% alpha, and uses `#232324`, `#e5ebf1`, and `#16825D` which the palette does not
+acknowledge. Converting it means first deciding whether those belong in the palette.
 
 Uses `@use`, not the deprecated `@import`.
 
