@@ -1,18 +1,28 @@
-import React from 'react';
+import type { Item } from '../../shared/types';
 import '../styles/row.scss';
-import { StoreData } from '../types';
 
 interface RowProps {
-  value: any;
-  handleClick: (data: StoreData) => void;
+  value: Item;
+  handleClick: (item: Item) => void;
   handleDelete: (id: number) => void;
-  handlePin: (data: StoreData) => void;
+  handlePin: (item: Item) => void;
   isEven: boolean;
   pinned: boolean;
 }
+
+// `Item` no longer carries a preformatted `date` string -- `id` is the capture
+// time, so the display value is derived from it.
+const dateFormat = new Intl.DateTimeFormat(undefined, {
+  hour: 'numeric',
+  minute: '2-digit',
+  second: '2-digit',
+  month: 'numeric',
+  day: '2-digit',
+});
+
 const Row = ({ value, handleClick, handleDelete, handlePin, isEven, pinned}: RowProps) => (
   <div
-    id={value.id}
+    id={String(value.id)}
     className={`row ${!isEven ? 'even' : ''}`}
     data-content={value.text}
   >
@@ -22,14 +32,14 @@ const Row = ({ value, handleClick, handleDelete, handlePin, isEven, pinned}: Row
     >
       {value.text}
     </span>
-    <span className="date">{value.date}</span>
-    
-    {!pinned && 
+    <span className="date">{dateFormat.format(new Date(value.id))}</span>
+
+    {!pinned &&
       <button className='pin-btn' onClick={(): void => handlePin(value)}>
         unpinned
       </button>
     }
-    {pinned && 
+    {pinned &&
       <button className='pin-btn' onClick={(): void => handlePin(value)}>
         pinned
       </button>
