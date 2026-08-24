@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Copy Pasta — clipboard history for macOS</title>
+    <meta
+      name="description"
+      content="A clipboard history utility for macOS. Everything you copy, searchable and re-pastable from a global shortcut. Stays on your machine."
+    />
+    <link rel="icon" type="image/png" href="./assets/bowl.png" />
+    <link rel="stylesheet" href="./styles/site.scss" />
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <!-- Drawn rather than linked: the only bowl asset in the repo is a
+             16x16 tray icon, which would be a blurry mess at hero size. -->
+        <svg
+          class="hero__mark"
+          viewBox="0 0 120 120"
+          role="img"
+          aria-label="A steaming bowl of pasta"
+        >
+          <g fill="none" stroke-linecap="round" stroke-width="4">
+            <path class="hero__steam" d="M45 30c0-7 9-7 9-14s-9-7-9-14" />
+            <path class="hero__steam" d="M63 32c0-6 8-6 8-12s-8-6-8-12" />
+            <path class="hero__steam" d="M81 30c0-7 9-7 9-14s-9-7-9-14" />
+          </g>
+          <path
+            class="hero__noodles"
+            fill="none"
+            stroke-linecap="round"
+            stroke-width="5"
+            d="M28 62c6-14 16-20 32-20s26 6 32 20M40 62c4-10 10-14 20-14s16 4 20 14"
+          />
+          <path class="hero__bowl" d="M16 64h88a44 44 0 0 1-88 0z" />
+          <path class="hero__base" d="M44 110h32" stroke-width="6" stroke-linecap="round" fill="none" />
+        </svg>
+
+        <h1 class="hero__title">Copy Pasta</h1>
+        <p class="hero__tagline">
+          Your clipboard, remembered. Everything you copy stays searchable and
+          one keystroke away.
+        </p>
+
+        <div class="hero__actions">
+          <a
+            class="btn btn--primary"
+            data-testid="download"
+            href="https://github.com/etcetera8/copy-pasta/releases/latest"
+          >
+            Download
+          </a>
+          <!-- TODO: replace with the real buy-me-a-coffee URL. site.test.ts
+               asserts this placeholder, so that test fails when it changes. -->
+          <a class="btn btn--secondary" data-testid="support" href="#">
+            ☕ Buy me a coffee
+          </a>
+        </div>
+
+        <p class="hero__platform">For macOS</p>
+      </section>
+
+      <section class="features">
+        <article class="feature" data-testid="feature">
+          <h3>Global shortcut</h3>
+          <p>
+            Press <kbd>⌘</kbd><kbd>⇧</kbd><kbd>V</kbd> from any app to bring up
+            your history. No dock icon — it lives in the menu bar.
+          </p>
+        </article>
+
+        <article class="feature" data-testid="feature">
+          <h3>Instant search</h3>
+          <p>
+            Start typing to filter everything you have copied. Found it? Click
+            it and it pastes straight into whatever you were doing.
+          </p>
+        </article>
+
+        <article class="feature" data-testid="feature">
+          <h3>Pin what matters</h3>
+          <p>
+            Pinned entries are kept indefinitely. Everything else clears itself
+            out after a week, so the list never becomes an archive.
+          </p>
+        </article>
+
+        <article class="feature" data-testid="feature">
+          <h3>Stays on your Mac</h3>
+          <p>
+            History is a plain JSON file in
+            <code>~/Library/Application&nbsp;Support/Copy&nbsp;Pasta/</code>.
+            No account, no sync, no server. Nothing leaves your machine.
+          </p>
+        </article>
+
+        <article class="feature" data-testid="feature">
+          <h3>Light and dark</h3>
+          <p>
+            Both themes, switched from the menu-bar icon. Your choice is
+            remembered between launches.
+          </p>
+        </article>
+      </section>
+
+      <section class="how">
+        <h2 class="how__title">How it works</h2>
+        <ol class="how__steps">
+          <li><span class="how__num">1</span> Copy anything, anywhere.</li>
+          <li>
+            <span class="how__num">2</span> Press
+            <kbd>⌘</kbd><kbd>⇧</kbd><kbd>V</kbd>.
+          </li>
+          <li><span class="how__num">3</span> Click an entry — it pastes.</li>
+        </ol>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <a href="https://github.com/etcetera8/copy-pasta">GitHub</a>
+      <span class="footer__dot">·</span>
+      <span>MIT licensed</span>
+      <span class="footer__dot">·</span>
+      <span>Built by Svet &amp; Parker</span>
+    </footer>
+  </body>
+</html>
