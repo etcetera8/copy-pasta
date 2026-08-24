@@ -23,7 +23,9 @@
   },
   "include": [
     "src/**/*",
+    "site/**/*",
     "*.config.ts",
+    "*.config.mts",
     "forge.config.ts"
   ]
 }

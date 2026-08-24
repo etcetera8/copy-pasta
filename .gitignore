@@ -91,3 +91,6 @@ package-lock.json
 
 # Electron-Forge
 out/
+
+# Landing page build output
+site/dist/
