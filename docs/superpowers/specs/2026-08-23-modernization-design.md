@@ -183,13 +183,41 @@ Referenced against current `master`.
 | 7 | `Landing.tsx:85-86` | `data[data.length - 1]` unguarded; TypeError when empty or all-pinned. |
 | 8 | `Landing.tsx:47` | `remote` module — removed in Electron 14. |
 | 9 | `Landing.tsx:47` | `event.keyCode` deprecated → `event.key === 'Escape'`. |
-| 10 | `index.ts:73-79` | `document` / `ipcRenderer` used in the **main** process. Throws `ReferenceError` silently, so `ready-to-show` and the autoUpdater handlers never register. |
+| 10 | `index.ts:73-79` | `document` / `ipcRenderer` used in the **main** process. Throws `ReferenceError` inside the `ready` handler. **Far worse than first assessed** (see below). |
 | 11 | `App.tsx:7` | `ReactDOM.render` removed in React 19 → `createRoot`. |
 | 12 | `Row.tsx:2-3` | `pinIcon` / `unpinIcon` imported but never rendered. |
 | 13 | `Row.tsx:17` | numeric `id` on a DOM node. |
 | 14 | `Row.tsx:18` | `isEven` inverted (`!isEven ? 'even' : ''`). |
 | 15 | `landingModel.ts` | entire file dead — never imported. |
 | 16 | `.eslintrc.json:10` | trailing comma — invalid JSON. |
+
+### Correction: bug 10 halts the main process
+
+This spec originally recorded bug 10 as a `ReferenceError` that "Electron swallows silently", costing
+only the auto-updater wiring. That was wrong, and the error was consequential.
+
+An uncaught exception in the main process `ready` handler does **not** merely skip the remaining
+statements. The process stays alive but its main-process work stops, so nothing after the throw ever
+runs: no `ipcMain` handler responds, `history:load` is never answered, and a renderer awaiting it
+hangs. Because `app.dock.hide()` makes this an accessory app, there is no visible crash to notice.
+A dead main process is externally indistinguishable from a healthy one — `npm start` still prints a
+clean log and Electron processes still appear in `ps`.
+
+**Verified:** an isolated Electron app that throws in its `ready` handler stays alive rather than
+exiting. Confirmed fixed by a full round trip against the real app — copying text reaches
+`userData/history.json` on disk, which requires renderer mount, hydration, IPC, and the main-side
+write handler all working.
+
+### The verification gap that hid it
+
+Phases 1 and 2 verified rendering with an **offscreen probe** — a separate Electron app pointed at the
+dev server. A probe supplies its own main process, so it exercises the renderer bundle and nothing
+else. It cannot observe a broken main process by construction, and reported a healthy UI throughout.
+
+**Every phase from 4 onward must verify the real application window, not only a probe.** Acceptable
+evidence: an end-to-end effect that requires main to be working (the clipboard → `history.json` round
+trip), or attaching to the real window over the DevTools protocol. A probe screenshot alone is not
+sufficient and must not be reported as proof the app works.
 
 Bug 10 is fixed by **relocating** the version/IPC code to the renderer and adding the missing
 `ipcMain.handle('app:version')`. Auto-update stays **dormant** (no publish provider configured);
