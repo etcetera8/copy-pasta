@@ -23,7 +23,7 @@ const dateFormat = new Intl.DateTimeFormat(undefined, {
 const Row = ({ value, handleClick, handleDelete, handlePin, isEven, pinned}: RowProps) => (
   <div
     id={String(value.id)}
-    className={`row ${!isEven ? 'even' : ''}`}
+    className={`row ${isEven ? 'even' : ''}`}
     data-content={value.text}
   >
     <span
