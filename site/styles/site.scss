@@ -1,0 +1,248 @@
+@use '../../src/shared/styles/tokens';
+
+// Paths are relative to this file, which is what Sass and Vite both expect.
+// The fonts are not duplicated into site/ -- there is one copy in the repo.
+//
+// The family names come from the tokens so that the name declared here and
+// the name requested below cannot drift apart: a typo would otherwise fall
+// back to a system font silently, with no build error.
+@font-face {
+  font-family: tokens.$font-display;
+  src: url('../../src/renderer/fonts/LeckerliOne-Regular.ttf');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: tokens.$font-body;
+  src: url('../../src/renderer/fonts/ABeeZee-Regular.ttf');
+  font-display: swap;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: tokens.$black;
+  color: tokens.$blue;
+  font-family: tokens.$font-body, system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+// --- Hero ---------------------------------------------------------------
+
+.hero {
+  text-align: center;
+  padding: 80px 0 64px;
+
+  &__mark {
+    width: 120px;
+    height: 120px;
+  }
+
+  &__steam {
+    stroke: tokens.$green;
+    opacity: 0.65;
+  }
+
+  &__noodles {
+    stroke: tokens.$green;
+  }
+
+  &__bowl {
+    fill: tokens.$blue;
+  }
+
+  &__base {
+    stroke: tokens.$blue;
+  }
+
+  &__title {
+    font-family: tokens.$font-display, cursive;
+    font-size: clamp(56px, 12vw, 88px);
+    font-weight: 400;
+    margin: 8px 0 0;
+    color: tokens.$purple;
+  }
+
+  &__tagline {
+    max-width: 30rem;
+    margin: 16px auto 0;
+    font-size: 20px;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 36px;
+  }
+
+  &__platform {
+    margin-top: 20px;
+    font-size: 14px;
+    opacity: 0.6;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+}
+
+// Mirrors the app's .btn: transparent until hover, then it fills.
+.btn {
+  display: inline-block;
+  padding: 12px 28px;
+  font-size: 17px;
+  font-weight: bold;
+  text-decoration: none;
+  border: 1px solid currentcolor;
+  background: none;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &--primary {
+    color: tokens.$green;
+
+    &:hover,
+    &:focus-visible {
+      background: tokens.$green;
+      color: tokens.$black;
+    }
+  }
+
+  &--secondary {
+    color: tokens.$light-theme-amber;
+
+    &:hover,
+    &:focus-visible {
+      background: tokens.$light-theme-amber;
+      color: tokens.$black;
+    }
+  }
+}
+
+// --- Features -----------------------------------------------------------
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+  padding-bottom: 72px;
+}
+
+.feature {
+  border: 1px solid rgba(tokens.$blue, 0.25);
+  padding: 24px;
+
+  h3 {
+    font-family: tokens.$font-display, cursive;
+    font-weight: 400;
+    font-size: 26px;
+    margin: 0 0 8px;
+    color: tokens.$green;
+  }
+
+  p {
+    margin: 0;
+    font-size: 16px;
+  }
+
+  code {
+    font-size: 13px;
+    color: tokens.$light-theme-amber;
+    word-break: break-all;
+  }
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  margin: 0 1px;
+  border: 1px solid rgba(tokens.$green, 0.5);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.9em;
+  text-align: center;
+  color: tokens.$green;
+}
+
+// --- How it works -------------------------------------------------------
+
+.how {
+  border-top: 1px solid rgba(tokens.$blue, 0.2);
+  padding: 56px 0 72px;
+  text-align: center;
+
+  &__title {
+    font-family: tokens.$font-display, cursive;
+    font-weight: 400;
+    font-size: 34px;
+    margin: 0 0 28px;
+    color: tokens.$purple;
+  }
+
+  &__steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 32px;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+    }
+  }
+
+  &__num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: tokens.$green;
+    color: tokens.$black;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+}
+
+// --- Footer -------------------------------------------------------------
+
+.footer {
+  border-top: 1px solid rgba(tokens.$blue, 0.2);
+  padding: 28px 24px 40px;
+  text-align: center;
+  font-size: 14px;
+  opacity: 0.75;
+
+  a {
+    color: tokens.$green;
+  }
+
+  &__dot {
+    margin: 0 10px;
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
