@@ -1,6 +1,24 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { Item } from '../../shared/types';
 import { readLegacyLocalStorage } from './migrate';
+
+/**
+ * `readLegacyLocalStorage` returns `Item[] | null`, and `null` is a real
+ * outcome these tests check for elsewhere. Narrow by failing loudly rather than
+ * coalescing to `[]`, which would quietly turn a null return into a pass.
+ */
+function items(): Item[] {
+  const result = readLegacyLocalStorage();
+  if (result === null) throw new Error('expected items, got null');
+  return result;
+}
+
+function byId(list: Item[], id: number): Item {
+  const found = list.find((i) => i.id === id);
+  if (!found) throw new Error(`expected an item with id ${id}`);
+  return found;
+}
 
 beforeEach(() => {
   localStorage.clear();
@@ -19,11 +37,11 @@ describe('readLegacyLocalStorage', () => {
       }),
     );
 
-    const items = readLegacyLocalStorage();
+    const result = items();
 
-    expect(items).toHaveLength(2); // de-duplicated by id
-    expect(items.find((i) => i.id === 2).pinned).toBe(true);
-    expect(items.find((i) => i.id === 1).pinned).toBe(false);
+    expect(result).toHaveLength(2); // de-duplicated by id
+    expect(byId(result, 2).pinned).toBe(true);
+    expect(byId(result, 1).pinned).toBe(false);
   });
 
   it('keeps a pinned item that only exists in pinnedData', () => {
@@ -35,10 +53,10 @@ describe('readLegacyLocalStorage', () => {
       }),
     );
 
-    const items = readLegacyLocalStorage();
+    const result = items();
 
-    expect(items.map((i) => i.id).sort()).toEqual([1, 3]);
-    expect(items.find((i) => i.id === 3).pinned).toBe(true);
+    expect(result.map((i) => i.id).sort()).toEqual([1, 3]);
+    expect(byId(result, 3).pinned).toBe(true);
   });
 
   it('drops the legacy date and searchIndex fields', () => {
