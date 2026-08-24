@@ -120,6 +120,12 @@ ipcMain.on('hide', () => {
   robot.keyTap('v', 'command');
 });
 
+// Replaces remote.getCurrentWindow().hide(); the remote module was removed in
+// Electron 14. Phase 2 moves this behind the preload bridge.
+ipcMain.on('window:hide', () => {
+  BrowserWindow.getAllWindows()[0]?.hide();
+});
+
 if (process.platform == 'darwin') {
   app.dock.hide();
 }
