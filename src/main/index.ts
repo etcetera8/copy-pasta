@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcRenderer, Menu, Tray } from 'electron';
+import { app, BrowserWindow, globalShortcut, Menu, Tray } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { startClipboardWatcher, stopClipboardWatcher } from './clipboard-watcher';
@@ -87,21 +87,23 @@ const createWindow = (): void => {
   startClipboardWatcher();
 
   //#region auto-updater
-  const version = document.getElementById('version');
-  
-  ipcRenderer.send('app_version');
-  ipcRenderer.on('app_version', (event, arg) => {
-    ipcRenderer.removeAllListeners('app_version');
-    version.innerText = 'Version ' + arg.version;
-  });
-  
-  mainWindow.once('ready-to-show', () => {
-    autoUpdater.checkForUpdatesAndNotify();
-  })
-
+  // The `document` / `ipcRenderer` block that used to sit here (bug 10) is
+  // gone. It was renderer code running in main, so `createWindow` threw a
+  // ReferenceError every launch -- and Electron's default handler for an
+  // uncaught main-process exception is a modal NSAlert, which `app.dock.hide()`
+  // keeps off screen. The main process sat wedged behind an invisible dialog
+  // and answered no IPC at all, so the window stayed blank and `history:load`
+  // never resolved. Phase 5 owns rendering the version string in the renderer;
+  // this phase only removes what cannot run here, because history cannot
+  // survive a restart while main is deadlocked.
+  //
+  // Update checks stay dormant: there is no publish provider configured, so
+  // `checkForUpdatesAndNotify()` would emit an unhandled `error` and wedge the
+  // app the same way. These two listeners are inert until Phase 5 wires it up.
   autoUpdater.on('update-available', () => {
     mainWindow.webContents.send('update_available');
-  });autoUpdater.on('update-downloaded', () => {
+  });
+  autoUpdater.on('update-downloaded', () => {
     mainWindow.webContents.send('update_downloaded');
   });
   //#endregion
