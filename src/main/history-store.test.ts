@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, promises as fsPromises } from 'fs';
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { setTimeout } from 'node:timers/promises';
 
 // `history-store` derives its path from `app.getPath('userData')`. Point that at
 // a throwaway directory so the tests never touch the real profile.
@@ -73,10 +74,15 @@ describe('history-store save', () => {
     expect(raw.items).toHaveLength(2);
   });
 
-  it('debounces: nothing is written synchronously, and only the last payload lands', async () => {
+  it('debounces: nothing reaches disk inside the window, and only the last payload lands', async () => {
     save({ items: [{ id: 1, text: 'first', pinned: false }], lightTheme: false });
     save({ items: [{ id: 2, text: 'second', pinned: false }], lightTheme: false });
 
+    expect(existsSync(historyFile())).toBe(false);
+
+    // Comfortably inside the 250ms window but far outside the time an
+    // undebounced write would need: nothing may have landed yet.
+    await setTimeout(120);
     expect(existsSync(historyFile())).toBe(false);
 
     await flush();
@@ -95,7 +101,23 @@ describe('history-store save', () => {
     await expect(load()).resolves.toEqual({ version: 1, ...payload });
   });
 
-  it('leaves no temp file behind, so the write is atomic', async () => {
+  it('writes to a temp file and renames it into place, never onto the live file', async () => {
+    const writeSpy = vi.spyOn(fsPromises, 'writeFile');
+    const renameSpy = vi.spyOn(fsPromises, 'rename');
+
+    save(payload);
+    await flush();
+
+    // A torn write must never be able to land on history.json itself.
+    expect(writeSpy).toHaveBeenCalledTimes(1);
+    expect(writeSpy.mock.calls[0][0]).toBe(`${historyFile()}.tmp`);
+    expect(renameSpy).toHaveBeenCalledWith(`${historyFile()}.tmp`, historyFile());
+
+    writeSpy.mockRestore();
+    renameSpy.mockRestore();
+  });
+
+  it('leaves no temp file behind', async () => {
     save(payload);
     await flush();
 
