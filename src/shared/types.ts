@@ -11,6 +11,18 @@ export type HistoryData = {
 };
 
 /**
+ * A published release newer than the running app.
+ *
+ * The release URL is deliberately absent: `openReleasePage()` takes no
+ * argument, so main opens the URL it already holds rather than one the
+ * renderer hands it. See the design doc, section 7.
+ */
+export type UpdateInfo = {
+  /** Release tag with any leading `v` stripped -- e.g. "1.1.0". */
+  version: string;
+};
+
+/**
  * The one and only surface the renderer has on anything privileged.
  *
  * Exposed on `window.copyPasta` by `src/preload/index.ts` through
