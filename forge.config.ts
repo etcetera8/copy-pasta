@@ -20,10 +20,10 @@ const config: ForgeConfig = {
     new AutoUnpackNativesPlugin({}),
     new VitePlugin({
       build: [
-        { entry: 'src/main/index.ts',    config: 'vite.main.config.ts',    target: 'main' },
-        { entry: 'src/preload/index.ts', config: 'vite.preload.config.ts', target: 'preload' },
+        { entry: 'src/main/index.ts',    config: 'vite.main.config.mts',    target: 'main' },
+        { entry: 'src/preload/index.ts', config: 'vite.preload.config.mts', target: 'preload' },
       ],
-      renderer: [{ name: 'main_window', config: 'vite.renderer.config.ts' }],
+      renderer: [{ name: 'main_window', config: 'vite.renderer.config.mts' }],
     }),
   ],
 };
