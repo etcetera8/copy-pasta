@@ -144,8 +144,9 @@ app.on('window-all-closed', (): void => {
 // channel, so it must not be per window.
 registerIpc();
 
-if (process.platform == 'darwin') {
-  app.dock.hide();
+if (process.platform === 'darwin') {
+  // Typed optional because `dock` only exists on macOS.
+  app.dock?.hide();
 }
 app.on('activate', (): void => {
   // On OS X it's common to re-create a window in the app when the
