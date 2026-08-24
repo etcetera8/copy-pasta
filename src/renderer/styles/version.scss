@@ -1,0 +1,18 @@
+$blue: #569CD6;
+$lightThemeGold: #CD9731;
+
+// Bottom-left corner, clear of the centred "Show More" button, and small
+// enough to stay out of the way of the history list.
+.version {
+  position: fixed;
+  left: 10px;
+  bottom: 8px;
+  margin: 0;
+  font-size: 12px;
+  color: $blue;
+  opacity: 0.6;
+}
+
+.light-theme .version {
+  color: $lightThemeGold;
+}

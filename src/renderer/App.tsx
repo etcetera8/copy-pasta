@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+import { Version } from './components/Version';
 import { Landing } from './pages/Landing';
 import { ClipboardStore } from './store/clipboardStore';
 import { hydrateAndPersist } from './store/persist';
@@ -11,4 +12,13 @@ const store = new ClipboardStore();
 void hydrateAndPersist(store);
 
 // `ReactDOM.render` was removed in React 19.
-createRoot(document.getElementById('root')).render(<Landing store={store} />);
+//
+// The version line used to be a bare `<p id="version">` in index.html that
+// main tried to fill in (bug 10). It is a component now, mounted here beside
+// the page rather than left lying in the document for someone to find.
+createRoot(document.getElementById('root')).render(
+  <>
+    <Landing store={store} />
+    <Version />
+  </>,
+);
