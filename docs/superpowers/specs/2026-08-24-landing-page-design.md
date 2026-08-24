@@ -70,8 +70,7 @@ New scripts in `package.json`:
 ## 4. Shared design tokens
 
 `$blue`, `$black`, and `$green` are currently hand-duplicated across `src/renderer/styles/index.scss`
-and `src/renderer/styles/landing.scss`. The palette and the `@font-face` declarations move to a new
-partial:
+and `src/renderer/styles/landing.scss`. The palette moves to a new partial:
 
 ```
 src/shared/styles/_tokens.scss
@@ -81,8 +80,13 @@ src/shared/styles/_tokens.scss
 existing home for things both sides of the process boundary depend on, so it is the consistent
 place for this.
 
-Uses `@use`, not the deprecated `@import`. Font `url()` paths inside the partial resolve relative to
-the partial, so both consumers get working fonts without per-consumer path fixes.
+Uses `@use`, not the deprecated `@import`.
+
+**Variables only — `@font-face` stays in each consumer.** Sass flattens `@use`d partials into the
+consuming file and does not rebase relative `url()` paths out of a partial, so a font path written
+in the partial would resolve correctly for one consumer and break for the other. Each stylesheet
+declares its own `@font-face` with a path correct for its own location. The `.ttf` files are not
+duplicated: there remains one copy, in `src/renderer/fonts/`.
 
 This is the only change to existing app code. It removes duplication that already exists, and it is
 what makes "the site matches the app" true by construction rather than by discipline.
