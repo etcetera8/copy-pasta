@@ -14,7 +14,6 @@ interface IProps {
 }
 
 export const Landing: FC<IProps>= observer(({ store }) => {
-  const  [intervalId, setIntervalId] = useState<NodeJS.Timeout>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [pageNumber, setPageNumber] = useState<number>(1);
   // The input stays fully controlled and responsive; only the filtering that
@@ -27,7 +26,6 @@ export const Landing: FC<IProps>= observer(({ store }) => {
     const offToggleTheme = window.copyPasta.onToggleTheme(() => {
       store.toggleTheme();
     });
-    checkForExpiredHistoryInterval();
     store.clearExpired();
     document.addEventListener('keydown', escapeListener, false);
 
@@ -35,9 +33,17 @@ export const Landing: FC<IProps>= observer(({ store }) => {
       offClipboardText();
       offToggleTheme();
       document.removeEventListener('keydown', escapeListener, false);
-      if (intervalId) clearInterval(intervalId);
     }
   }, [])
+
+  // The handle stays local to the effect. It used to live in `useState`, which
+  // meant the `[]`-deps cleanup closed over the first render's `null` and the
+  // interval was never cleared -- it outlived every unmount and reload, still
+  // holding the store it was created with.
+  useEffect(() => {
+    const id = setInterval(() => store.clearExpired(), DAY_IN_MILLISECONDS);
+    return () => clearInterval(id);
+  }, [store]);
 
   // Driven by the store rather than poked at from the toggle handler, so a
   // theme restored from history.json applies once hydration lands.
@@ -77,12 +83,6 @@ export const Landing: FC<IProps>= observer(({ store }) => {
   const paginateData = (array: Item[], pageSize = 13): Item[] => (
     array.slice(0, pageNumber * pageSize)
   )
-
-  const checkForExpiredHistoryInterval = (): void => {
-    setIntervalId(setInterval(() => {
-      store.clearExpired();
-    }, DAY_IN_MILLISECONDS))
-  }
 
   return(
       <main>
