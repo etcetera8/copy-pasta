@@ -1,8 +1,8 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, ipcRenderer, Menu, Tray } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcRenderer, Menu, Tray } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import path from 'path';
-import robot from 'robotjs';
 import { startClipboardWatcher, stopClipboardWatcher } from './clipboard-watcher';
+import { registerIpc } from './ipc';
 // Injected by @electron-forge/plugin-vite.
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -124,16 +124,10 @@ app.on('window-all-closed', (): void => {
   }
 });
 
-ipcMain.on('hide', () => {
-  app.hide();
-  robot.keyTap('v', 'command');
-});
-
-// Replaces remote.getCurrentWindow().hide(); the remote module was removed in
-// Electron 14. Phase 2 moves this behind the preload bridge.
-ipcMain.on('window:hide', () => {
-  BrowserWindow.getAllWindows()[0]?.hide();
-});
+// Every ipcMain handler now lives in ./ipc, reached only through the preload
+// bridge. Registered at module load: `ipcMain.handle` rejects a duplicate
+// channel, so it must not be per window.
+registerIpc();
 
 if (process.platform == 'darwin') {
   app.dock.hide();
