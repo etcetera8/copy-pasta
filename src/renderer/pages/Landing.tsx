@@ -63,13 +63,10 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
   }
   
   const listenForChange = (): void => {
-    // @ts-ignore
     clipboardListener.on('text-changed', () => {
       storeCopy();
     });
-    // @ts-ignore
     clipboardListener.on('image-changed', () => {
-      const currentImage = clipboardListener.readImage();
       // #TODO: Handle image changes
     });
   }

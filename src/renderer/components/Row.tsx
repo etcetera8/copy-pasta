@@ -1,6 +1,4 @@
 import React from 'react';
-import unpinIcon from '../assets/pin-filled.svg';
-import pinIcon from '../assets/pin.svg';
 import '../styles/row.scss';
 import { StoreData } from '../types';
 
