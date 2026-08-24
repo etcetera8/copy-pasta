@@ -17,11 +17,12 @@ const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     webPreferences: {
+      // Forge's Vite plugin emits both bundles into `.vite/build`, so the
+      // preload sits next to the main bundle rather than in `../preload/`.
       preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: true,
-      // Electron 12+ defaults this to true. Phase 1 keeps the renderer exactly
-      // as it was (node integration, no bridge); Phase 2 flips both.
-      contextIsolation: false,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
       devTools: true,
     },
     frame: false,
@@ -51,7 +52,7 @@ const createWindow = (): void => {
     {
       label: 'Toggle Light/Dark Mode',
       click: (): void => {
-        mainWindow.webContents.send('toggleTheme');
+        mainWindow.webContents.send('theme:toggle');
       }
     },
     { type: 'separator' },

@@ -1,5 +1,3 @@
-import { clipboard, ipcRenderer } from 'electron';
-import clipboardListener from 'electron-clipboard-extended';
 import { observer } from 'mobx-react';
 import React, { FC, useEffect, useState } from 'react';
 import { DebounceInput } from 'react-debounce-input';
@@ -20,16 +18,20 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
 
   useEffect(() => {
     handleSearch({ target: { value: '' }});
-    listenForChange();
-    themeListener();
+    // Clipboard polling lives in the main process now; new text arrives here.
+    const offClipboardText = window.copyPasta.onClipboardText(storeCopy);
+    const offToggleTheme = window.copyPasta.onToggleTheme(() => {
+      dataStore.toggleTheme();
+      renderLightTheme();
+    });
     checkForExpiredHistoryInterval();
     dataStore.clearExpiredData();
     document.addEventListener('keydown', escapeListener, false);
-    clipboardListener.startWatching();
     window.setTimeout(() => renderLightTheme(), .1);
 
     return () => {
-      clipboardListener.stopWatching();
+      offClipboardText();
+      offToggleTheme();
       document.removeEventListener('keydown', escapeListener, false);
       if (intervalId) clearInterval(intervalId);
     }
@@ -44,14 +46,7 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
   }, [searchTerm]);
 
   const escapeListener = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') ipcRenderer.send('window:hide');
-  }
-
-  const themeListener = (): void => {
-    ipcRenderer.on('toggleTheme', () => {
-      dataStore.toggleTheme();
-      renderLightTheme();
-    });
+    if (event.key === 'Escape') window.copyPasta.hideWindow();
   }
 
   const renderLightTheme = (): void => {
@@ -62,28 +57,19 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
     else classList.remove('light-theme');
   }
   
-  const listenForChange = (): void => {
-    clipboardListener.on('text-changed', () => {
-      storeCopy();
-    });
-    clipboardListener.on('image-changed', () => {
-      // #TODO: Handle image changes
-    });
-  }
-  
-  const storeCopy = (): void => {
-    const text = clipboard.readText();
+  const storeCopy = (text: string): void => {
     const copyContent: InputData = { text };
 
     dataStore.addData(copyContent)
   };
 
   const addToClipboard = (data: StoreData): void => {
-    const mostRecent = dataStore.data[dataStore.data.length - 1];
-    if (mostRecent.id !== data.id) removeFromHistory(data.id);
-    
-    clipboardListener.writeText(data.text);
-    ipcRenderer.send('hide');
+    // The old code deleted the item first and let the clipboard listener
+    // re-add it. Main's watcher now suppresses the app's own write
+    // (`noteWrite`), so deleting here would just lose the item -- the entry
+    // simply stays where it is.
+    void window.copyPasta.writeClipboard(data.text);
+    window.copyPasta.hideAndPaste();
   }
 
   const removeFromHistory = (id: number): void => {
