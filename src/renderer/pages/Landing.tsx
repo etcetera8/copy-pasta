@@ -1,4 +1,4 @@
-import { clipboard, ipcRenderer, remote } from 'electron';
+import { clipboard, ipcRenderer } from 'electron';
 import clipboardListener from 'electron-clipboard-extended';
 import { observer } from 'mobx-react';
 import React, { FC, useEffect, useState } from 'react';
@@ -44,7 +44,7 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
   }, [searchTerm]);
 
   const escapeListener = (event: KeyboardEvent): void => {
-    if (event.keyCode === 27) remote.getCurrentWindow().hide();
+    if (event.key === 'Escape') ipcRenderer.send('window:hide');
   }
 
   const themeListener = (): void => {
@@ -63,13 +63,10 @@ export const Landing: FC<IProps>= observer(({ dataStore }) => {
   }
   
   const listenForChange = (): void => {
-    // @ts-ignore
     clipboardListener.on('text-changed', () => {
       storeCopy();
     });
-    // @ts-ignore
     clipboardListener.on('image-changed', () => {
-      const currentImage = clipboardListener.readImage();
       // #TODO: Handle image changes
     });
   }

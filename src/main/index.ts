@@ -2,10 +2,12 @@ import { app, BrowserWindow, globalShortcut, ipcMain, ipcRenderer, Menu, Tray } 
 import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import robot from 'robotjs';
-declare const MAIN_WINDOW_WEBPACK_ENTRY: any;
+// Injected by @electron-forge/plugin-vite.
+declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
+declare const MAIN_WINDOW_VITE_NAME: string;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
+if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
@@ -14,7 +16,11 @@ const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: true,
+      // Electron 12+ defaults this to true. Phase 1 keeps the renderer exactly
+      // as it was (node integration, no bridge); Phase 2 flips both.
+      contextIsolation: false,
       devTools: true,
     },
     frame: false,
@@ -26,7 +32,11 @@ const createWindow = (): void => {
   });
 
   // and load the index.html of the app.
-  mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+  } else {
+    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+  }
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -108,6 +118,12 @@ app.on('window-all-closed', (): void => {
 ipcMain.on('hide', () => {
   app.hide();
   robot.keyTap('v', 'command');
+});
+
+// Replaces remote.getCurrentWindow().hide(); the remote module was removed in
+// Electron 14. Phase 2 moves this behind the preload bridge.
+ipcMain.on('window:hide', () => {
+  BrowserWindow.getAllWindows()[0]?.hide();
 });
 
 if (process.platform == 'darwin') {

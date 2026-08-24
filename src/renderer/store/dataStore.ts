@@ -57,9 +57,7 @@ const DataStore: DataStore = observable({
     
     const index = DataStore.unpinnedData.indexOf(itemToPin);
     console.log(DataStore.pinnedData, DataStore.unpinnedData);
-    index > -1 ?
-      DataStore.unpinnedData.splice(index, 1) :
-      null;
+    if (index > -1) DataStore.unpinnedData.splice(index, 1);
   }),
   unpinData: action((id: number) => {
     DataStore.pinnedData = DataStore.pinnedData.filter(v => v.id !== id);
