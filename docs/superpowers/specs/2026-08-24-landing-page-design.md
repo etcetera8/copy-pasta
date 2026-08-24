@@ -35,6 +35,16 @@ installed.
 The page ships **no client-side JavaScript**. It is static content, so the build output is one HTML
 file, one CSS file, the fonts, and the icon.
 
+## 2a. Platform positioning
+
+**macOS only.** Windows ships a built-in clipboard manager, so the page targets macOS and says so
+plainly rather than listing three platforms. Consequences for the page:
+
+- The hero sub-line reads `For macOS`, not `macOS · Windows · Linux`.
+- Shortcuts are written in macOS form only (`⌘⇧V`), with no `Ctrl` alternative.
+- The storage path can be stated concretely as
+  `~/Library/Application Support/Copy Pasta/history.json` instead of "your user-data directory".
+
 ## 3. Layout
 
 ```
@@ -83,20 +93,20 @@ One scrolling page on the `#1e1e1e` ground.
 
 **Hero.** Pasta bowl icon, "Copy Pasta" set in Leckerli One, a one-line tagline, then two buttons —
 Download (green, primary) and "Buy me a coffee" (amber, secondary). Under them, a small line reading
-`macOS · Windows · Linux`.
+`For macOS`.
 
 **Features.** Five cards:
 
 | Feature | Claim |
 |---|---|
-| Global shortcut | `⌘⇧V` (`Ctrl⇧V` on Windows/Linux) from anywhere; no dock icon, lives in the menu bar |
+| Global shortcut | `⌘⇧V` from anywhere; no dock icon, lives in the menu bar |
 | Instant search | Filter the whole history as you type |
 | Pinning | Pinned entries kept indefinitely; unpinned expire after a week |
-| Stays local | History is a JSON file in your user-data directory; nothing leaves your machine |
+| Stays local | History is a JSON file at `~/Library/Application Support/Copy Pasta/history.json`; nothing leaves your machine |
 | Light and dark | Both themes, toggled from the menu-bar icon |
 
-**How it works.** Three steps: copy anything → press `⌘⇧V` (`Ctrl⇧V` on Windows/Linux) → click an
-entry and it pastes into the app you were in.
+**How it works.** Three steps: copy anything → press `⌘⇧V` → click an entry and it pastes into the
+app you were in.
 
 **Footer.** GitHub link, MIT license, contributors.
 
@@ -141,4 +151,12 @@ Verification before completion: `npm test`, `npm run lint`, `npm run typecheck`,
 - Cutting a release so the download link resolves.
 - The real buy-me-a-coffee URL.
 - Per-platform download detection or direct installer links.
+- Removing the Windows and Linux makers from `forge.config.ts` (see §9).
 - Any change to app behaviour.
+
+## 9. Follow-up, not part of this work
+
+`forge.config.ts` still builds `MakerSquirrel` (Windows), `MakerDeb`, and `MakerRpm` (Linux)
+alongside the macOS `MakerDMG` and `MakerZIP`. If Copy Pasta is macOS-only going forward, those
+three makers are dead weight in the build. That is a build-configuration change with its own
+testing implications, so it is deliberately excluded here and left as a separate decision.
