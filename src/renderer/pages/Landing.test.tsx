@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, render } from '@testing-library/react';
+import { act, fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DAY_IN_MILLISECONDS } from '../constants';
 import { ClipboardStore } from '../store/clipboardStore';
@@ -77,6 +77,37 @@ describe('Landing', () => {
 
     // A leaked interval would have fired three times by now.
     expect(clearExpired).not.toHaveBeenCalled();
+  });
+
+  // Bug 6 regression guard. The search term used to be compiled with
+  // `new RegExp(searchTerm)`, so a lone `(` threw. Phase 3 moved results() to a
+  // substring match; this drives the same path the user does -- through the
+  // real <input>, the debounce, and into the store.
+  it('accepts regex metacharacters typed into the search box', () => {
+    const store = new ClipboardStore();
+    store.add('call foo(bar)');
+    store.add('unrelated');
+
+    const { container } = render(<Landing store={store} />);
+    const search = container.querySelector('input.search')!;
+
+    for (const value of ['(', '(b', '(bar)', '[', '*', '\\']) {
+      expect(() => {
+        fireEvent.change(search, { target: { value } });
+        act(() => {
+          vi.advanceTimersByTime(600);
+        });
+      }, `typing ${value} threw`).not.toThrow();
+    }
+
+    // And the search actually filtered rather than silently matching nothing.
+    fireEvent.change(search, { target: { value: '(bar)' } });
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+    const rows = container.querySelectorAll('.row');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].getAttribute('data-content')).toBe('call foo(bar)');
   });
 
   it('unsubscribes from both bridge subscriptions on unmount', () => {
