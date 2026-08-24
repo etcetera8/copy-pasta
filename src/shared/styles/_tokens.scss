@@ -1,7 +1,11 @@
 // Copy Pasta's palette, shared by the Electron renderer and the landing page.
 //
-// These values were duplicated by hand across index.scss and landing.scss.
-// They live here now so the app and the marketing page cannot drift apart.
+// Consumed by index.scss, landing.scss, and version.scss. row.scss
+// deliberately keeps its own copies instead: it needs palette decisions this
+// partial doesn't make ($yellow isn't here, rgba(86, 156, 214, .4) is an
+// inlined $blue at 40% alpha, and #232324/#e5ebf1/#16825D aren't part of the
+// palette below), so folding it in would mean making those calls, not just
+// wiring up a reference.
 //
 // Variables only. `@font-face` belongs in the consuming stylesheet: Sass does
 // not rebase relative url() paths out of a partial, so a font path written
@@ -14,10 +18,10 @@ $green: #B5CEA8;
 $purple: #C586C0;
 
 // Light theme
-$light-bg: #fff;
-$light-blue: #0451A5;
-$light-maroon: #811F3F;
-$light-amber: #CD9731;
+$light-theme-bg: #fff;
+$light-theme-blue: #0451A5;
+$light-theme-maroon: #811F3F;
+$light-theme-amber: #CD9731;
 
 // Type
 $font-display: leckerli-one;
