@@ -2,6 +2,7 @@ import { app, BrowserWindow, globalShortcut, ipcMain, ipcRenderer, Menu, Tray } 
 import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import robot from 'robotjs';
+import { startClipboardWatcher, stopClipboardWatcher } from './clipboard-watcher';
 // Injected by @electron-forge/plugin-vite.
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -78,7 +79,11 @@ const createWindow = (): void => {
   globalShortcut.register('CommandOrControl+Shift+V', (): void => {
     mainWindow.show();
   })
-  
+
+  // Clipboard capture belongs to main now: a sandboxed renderer cannot poll the
+  // system clipboard itself. New text arrives in the renderer as `clipboard:text`.
+  startClipboardWatcher();
+
   //#region auto-updater
   const version = document.getElementById('version');
   
@@ -105,6 +110,10 @@ const createWindow = (): void => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', createWindow);
+
+app.on('will-quit', (): void => {
+  stopClipboardWatcher();
+});
 
 // Quit when all windows are closed.
 app.on('window-all-closed', (): void => {
