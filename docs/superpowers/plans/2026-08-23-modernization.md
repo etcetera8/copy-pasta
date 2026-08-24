@@ -49,8 +49,13 @@ Claude-Session: https://claude.ai/code/session_01XaSMKDXibDStS3Lk5HLYfH
 https://claude.ai/code/session_01XaSMKDXibDStS3Lk5HLYfH
 ```
 
-**Verification harness.** There is no test suite (deliberate scope decision). Each phase is verified by
-driving the real app. Two reusable procedures:
+**Tests.** Vitest, added in Phase 1. `npm test` runs once, `npm run test:watch` for development.
+Tests sit beside their subject as `*.test.ts`. Write the test BEFORE the implementation it covers —
+see spec §9 for the required coverage per phase. A test asserting behaviour you have not written yet
+should fail first; if it passes immediately, it is not testing what you think.
+
+**Verification harness.** Tests cannot prove the Electron wiring works, so also drive the real app.
+Three reusable procedures:
 
 *V1 — launch check.* Start the app in the background and confirm it reaches launch with a clean log.
 
@@ -62,7 +67,9 @@ grep -qE "Launching Application|error|Error|ERR" /tmp/cp-start.log
 Expected: `Launching Application`, an Electron main process alive, and no `Error`/`ERR!` lines.
 
 *V2 — render check.* The window opens hidden (`show: false`), so render it offscreen from the dev
-server instead. Create this in a temp dir (NOT in the repo), substituting the dev server port:
+server instead. Create this in a temp dir (NOT in the repo), substituting the dev server port.
+**Symlink the repo's `node_modules` into that temp dir** (`ln -sfn <repo>/node_modules <tmp>/node_modules`)
+or renderer `require` calls will not resolve and you will get a false failure:
 
 ```js
 // /tmp/shot/main.js   (package.json: {"name":"shot","version":"1.0.0","main":"main.js"})
@@ -794,6 +801,105 @@ export function readLegacyLocalStorage(): Item[] | null {
 
 - [ ] **Step 3: Commit**
 
+### Task 3.2b: Tests for the store, migration and history file
+
+**Files:** Create `src/renderer/store/clipboardStore.test.ts`, `src/renderer/store/migrate.test.ts`, `src/main/history-store.test.ts`
+
+Write these BEFORE Task 3.3's implementation. They must fail first.
+
+- [ ] **Step 1: Store tests** covering, at minimum:
+
+```ts
+import { describe, it, expect } from 'vitest';
+import { ClipboardStore } from './clipboardStore';
+
+describe('ClipboardStore', () => {
+  it('pinning keeps the item and does not drop others', () => {
+    const s = new ClipboardStore();
+    s.add('alpha'); s.add('beta');
+    s.togglePin(s.items[0].id);
+    expect(s.items).toHaveLength(2);
+    expect(s.items.map(i => i.text).sort()).toEqual(['alpha', 'beta']);
+  });
+
+  it('pinned and unpinned partition items exactly', () => {
+    const s = new ClipboardStore();
+    s.add('a'); s.add('b'); s.add('c');
+    s.togglePin(s.items[1].id);
+    expect(s.pinned).toHaveLength(1);
+    expect(s.unpinned).toHaveLength(2);
+    expect(s.pinned.length + s.unpinned.length).toBe(s.items.length);
+  });
+
+  it('treats regex metacharacters in search as literal text', () => {
+    const s = new ClipboardStore();
+    s.add('call foo(bar)');
+    expect(() => s.results('(')).not.toThrow();
+    expect(s.results('(bar)')).toHaveLength(1);
+    expect(s.results('[')).toHaveLength(0);
+  });
+
+  it('expires old unpinned items but never pinned ones', () => {
+    const s = new ClipboardStore();
+    const old = Date.now() - 8 * 86400000;
+    s.items = [
+      { id: old, text: 'stale', pinned: false },
+      { id: old, text: 'kept',  pinned: true  },
+    ];
+    s.clearExpired();
+    expect(s.items.map(i => i.text)).toEqual(['kept']);
+  });
+
+  it('ignores empty captures', () => {
+    const s = new ClipboardStore();
+    s.add('');
+    expect(s.items).toHaveLength(0);
+  });
+});
+```
+
+- [ ] **Step 2: Migration tests**
+
+```ts
+import { describe, it, expect } from 'vitest';
+import { readLegacyLocalStorage } from './migrate';
+
+describe('readLegacyLocalStorage', () => {
+  it('flattens data + pinnedData and marks pinned correctly', () => {
+    localStorage.setItem('data', JSON.stringify({
+      data: [{ id: 1, text: 'a' }, { id: 2, text: 'b' }],
+      pinnedData: [{ id: 2, text: 'b' }],
+    }));
+    const items = readLegacyLocalStorage()!;
+    expect(items).toHaveLength(2);                       // de-duplicated by id
+    expect(items.find(i => i.id === 2)!.pinned).toBe(true);
+    expect(items.find(i => i.id === 1)!.pinned).toBe(false);
+  });
+
+  it('returns null instead of throwing on corrupt input', () => {
+    localStorage.setItem('data', '{not json');
+    expect(readLegacyLocalStorage()).toBeNull();
+  });
+
+  it('returns null when there is nothing to migrate', () => {
+    localStorage.removeItem('data');
+    expect(readLegacyLocalStorage()).toBeNull();
+  });
+});
+```
+This file needs `// @vitest-environment jsdom` at the top for `localStorage`.
+
+- [ ] **Step 3: history-store tests** — a write/read round-trip, and that a corrupt or absent file yields defaults rather than throwing. Point `app.getPath` at a temp dir via a vi.mock of `electron`.
+
+- [ ] **Step 4: Run them and confirm they FAIL** (the modules do not exist yet)
+
+```bash
+npm test
+```
+Expected: failures referencing missing modules. If anything passes, the test is wrong.
+
+- [ ] **Step 5: Commit the tests**
+
 ### Task 3.3: Normalized mobx 7 store
 
 **Files:** Create `src/renderer/store/clipboardStore.ts`. Delete `src/renderer/store/dataStore.ts`.
@@ -875,6 +981,11 @@ export async function hydrateAndPersist(store: ClipboardStore) {
 - [ ] **Step 3: Commit**
 
 ### Task 3.4: React 19 root + mobx-react 10 wiring
+
+**Note:** Phase 1 deliberately left React 16 / mobx 5 in place, so this task performs the dependency
+bump as well: `react@^19.2.8 react-dom@^19.2.8 @types/react@^19 @types/react-dom@^19 mobx@^7.0.3
+mobx-react@^10.0.2`, and removes `mobx-persist`. Switch `tsconfig` `jsx` to `react-jsx` at the same
+time (the automatic runtime needs React >= 16.14, which is why Phase 1 could not do it).
 
 **Files:** Modify `src/renderer/App.tsx`, `src/renderer/pages/Landing.tsx`
 
@@ -959,6 +1070,10 @@ export function useDebouncedValue<T>(value: T, delay = 500): T {
   return debounced;
 }
 ```
+
+- [ ] **Step 1b: Test the hook first** — `src/renderer/hooks/useDebouncedValue.test.ts`, with
+`// @vitest-environment jsdom` at the top. Cover: returns the initial value synchronously, and only
+returns an updated value after the delay elapses (drive time with `vi.useFakeTimers()`).
 
 - [ ] **Step 2: Use a plain `<input>`** with local `searchTerm` state, feeding `useDebouncedValue(searchTerm)` into `store.results(...)`. Remove the `react-debounce-input` dependency.
 
@@ -1055,8 +1170,7 @@ in any released build.
 (substring match), bug 7 → 4.2, bugs 8-9 → 1.4, bug 10 → 5.1, bug 11 → 3.4, bugs 12-14 → 4.4,
 bug 15 → 4.4, bug 16 → 1.5; §7 layout → 1.3; §8 phases → the five phase headings.
 
-**Known deviation from the writing-plans skill.** The skill prescribes TDD. The user explicitly scoped
-this work without a test suite, and user instruction takes precedence over skill guidance. Verification
-is therefore V1/V2/V3 against the running app rather than automated tests. The residual risk — that
-pin/unpin, expiry and dedupe are rewritten without regression coverage — is recorded in spec §9 and
-was accepted.
+**Testing.** The scope initially excluded a test suite; the user added it during Phase 1. Vitest landed
+in Phase 1, and Phases 3 and 4 now write tests before their implementations, covering exactly the
+logic the audit found broken — pin/unpin, expiry, search escaping, and the legacy migration. V1/V2/V3
+remain, because tests cannot prove the Electron wiring works.

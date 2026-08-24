@@ -2,7 +2,8 @@
 
 **Date:** 2026-08-23
 **Status:** Approved
-**Scope:** Full dependency modernization + fixing the bugs uncovered during audit. UI and feature set unchanged.
+**Scope:** Full dependency modernization + fixing the bugs uncovered during audit + a Vitest suite covering the
+rewritten logic. UI and feature set unchanged.
 
 ## 1. Background
 
@@ -41,7 +42,7 @@ This removes the single largest risk from the upgrade.
 | Bundler | webpack 4.44 + ~10 loaders | Vite 8.2 (`@electron-forge/plugin-vite` 7.11.2) |
 | React | 16.13 | 19.2 |
 | mobx | 5.15 / mobx-react 6.1 | 7.0 / mobx-react 10.0 |
-| TypeScript | 3.9 | 7.0 |
+| TypeScript | 3.9 | 6.0.3 |
 | ESLint | 7 + @typescript-eslint 2, `.eslintrc.json` | 10, flat config |
 | sass | 1.52 | 1.103 |
 | robotjs | 0.6.0 (NAN, compiled) | 0.9.1 (N-API, prebuilt) |
@@ -242,9 +243,9 @@ Two coupling constraints drive this ordering:
 
 | # | Branch | Content | Done when |
 |---|---|---|---|
-| 1 | `modernize/01-toolchain` | forge 7 + Vite + Electron 43 + TS 7 + robotjs 0.9.1 + sass; delete `webpack.*.js`, `.eslintrc.json`, `package-lock.json`; add `forge.config.ts`, `vite.*.config.ts`, `eslint.config.js`, `.nvmrc`. Minimal `remote` → IPC fix. React 16 / mobx 5 / mobx-persist untouched. | `npm start` launches on Node 22, window renders, robotjs loads, Escape-to-hide still works |
+| 1 | `modernize/01-toolchain` | forge 7 + Vite + Electron 43 + TS 6.0.3 + robotjs 0.9.1 + sass (React 16 / mobx 5 stay; bumping them here would leave this phase broken since React 19 removes ReactDOM.render); delete `webpack.*.js`, `.eslintrc.json`, `package-lock.json`; add `forge.config.ts`, `vite.*.config.ts`, `eslint.config.js`, `.nvmrc`. Minimal `remote` → IPC fix. React 16 / mobx 5 / mobx-persist untouched. | `npm start` launches on Node 22, window renders, robotjs loads, Escape-to-hide still works |
 | 2 | `modernize/02-process-model` | preload + `contextBridge`, `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`; clipboard watcher moves to main; renderer stops importing `electron` | App runs fully sandboxed; copy, paste, hide, theme toggle all work |
-| 3 | `modernize/03-state-layer` | React 19 `createRoot`; mobx 7 `makeAutoObservable` + mobx-react 10; drop `mobx-persist`; normalize to `Item[]` with derived getters; `history.json` in `userData` with atomic + debounced writes; one-time localStorage migration; pinned-items-never-expire | History survives restart; pin/unpin no longer corrupts; legacy history imported once |
+| 3 | `modernize/03-state-layer` | React 19 + mobx 7 dependency bump; `createRoot`; mobx 7 `makeAutoObservable` + mobx-react 10; drop `mobx-persist`; normalize to `Item[]` with derived getters; `history.json` in `userData` with atomic + debounced writes; one-time localStorage migration; pinned-items-never-expire | History survives restart; pin/unpin no longer corrupts; legacy history imported once |
 | 4 | `modernize/04-bugfixes-cleanup` | Bugs 5-7, 9, 12-14; delete `landingModel.ts`; drop `react-debounce-input` for `useDebouncedValue`; drop `dateformat` for `Intl.DateTimeFormat` | Search accepts `(`; clicking with empty history is safe; interval actually cleared |
 | 5 | `modernize/05-autoupdate-placement` | Move version/IPC code to the renderer, add `ipcMain.handle('app:version')`, render `#version`; leave update checks dormant; open tracking issue | Version string renders; nothing throws; GitHub issue filed |
 
@@ -253,23 +254,38 @@ PR automatically as the one beneath it merges.
 
 ## 9. Verification
 
-No automated test suite (explicit scope decision). Each phase is verified by driving the real app:
+Two layers: automated tests for pure logic, and driving the real app for everything else.
 
-1. `npm start` on Node 22 — must reach `Launching Application` with a clean log.
-2. Renderer rendered offscreen via `webContents.capturePage()` against the dev server, and the
-   PNG inspected. A blank frame is a failure.
+### Automated (Vitest)
+
+Added in Phase 1. `npm test` runs `vitest run`; `npm run test:watch` for development.
+Tests live beside their subject as `*.test.ts`.
+
+Required coverage, written **before** the corresponding implementation:
+
+| Phase | Subject | Must cover |
+|---|---|---|
+| 1 | legacy `dataStore` | characterization via `it.fails` — documents the aliasing defect empirically |
+| 3 | `ClipboardStore` | pin/unpin does not drop or duplicate items; `pinned`/`unpinned` partition `items`; expiry removes old unpinned items and **never** pinned ones; `results()` handles regex metacharacters (`(`, `[`, `*`) as literal text; `add` ignores empty strings |
+| 3 | `readLegacyLocalStorage` | flattens `data` + `pinnedData`, sets `pinned` correctly, de-duplicates by `id`, returns `null` rather than throwing on absent/corrupt input |
+| 3 | `history-store` | missing or corrupt file yields defaults instead of throwing; a write followed by a read round-trips |
+| 4 | `useDebouncedValue` | returns the initial value immediately, and the updated value only after the delay |
+
+The Phase 1 characterization tests are rewritten as ordinary passing assertions in Phase 3.
+
+### Manual (driving the real app)
+
+Tests cannot prove the Electron wiring works, so each phase is also verified by running it:
+
+1. `npm start` on Node 22 — must launch with a clean log.
+2. Renderer rendered offscreen via `webContents.capturePage()` against the dev server, and the PNG
+   inspected. A blank frame is a failure. Note: an offscreen probe outside the repo must have the
+   repo's `node_modules` symlinked in, or renderer `require` calls will not resolve.
 3. robotjs loaded under Electron and a read-only call (`getScreenSize()`) exercised.
    **Never call `keyTap` during verification** — it would paste into whatever app has focus.
 4. Phase 3 additionally: restart the app and confirm history persisted to `history.json`.
 
-### Recorded risk
-
-Phases 3 and 4 rewrite exactly the logic where the subtle bugs live (pin/unpin, expiry, dedupe)
-with no automated tests. Launch verification proves the app starts; it does not prove those
-state transitions are correct. The store is pure functions over an array, so ~30 lines of Vitest
-would cover it. Accepted by the user; recorded here deliberately.
-
 ## 10. Out of scope
 
-UI redesign; test suite; auto-update publish pipeline; Windows/Linux verification (macOS Intel
+UI redesign; auto-update publish pipeline; Windows/Linux verification (macOS Intel
 only); universal/arm64 packaging (prebuilts exist, so it stays open).
