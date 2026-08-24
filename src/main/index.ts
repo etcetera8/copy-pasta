@@ -2,6 +2,7 @@ import { app, BrowserWindow, globalShortcut, ipcRenderer, Menu, Tray } from 'ele
 import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { startClipboardWatcher, stopClipboardWatcher } from './clipboard-watcher';
+import { flush } from './history-store';
 import { registerIpc } from './ipc';
 // Injected by @electron-forge/plugin-vite.
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
@@ -112,8 +113,19 @@ const createWindow = (): void => {
 // Some APIs can only be used after this event occurs.
 app.on('ready', createWindow);
 
-app.on('will-quit', (): void => {
+// Set once we have taken over the quit, so the second `will-quit` that
+// `app.exit()` could raise is not blocked a second time.
+let quitting = false;
+
+app.on('will-quit', (event): void => {
   stopClipboardWatcher();
+  if (quitting) return;
+  quitting = true;
+
+  // History writes are debounced, so the last capture may still be queued.
+  // Hold the quit just long enough to land it.
+  event.preventDefault();
+  void flush().finally(() => app.exit());
 });
 
 // Quit when all windows are closed.

@@ -9,9 +9,9 @@ import path from 'node:path';
 const mocks = vi.hoisted(() => ({ userData: '' }));
 vi.mock('electron', () => ({ app: { getPath: () => mocks.userData } }));
 
-import { flush, load, save } from './history-store';
+import { flush, load, save, type Payload } from './history-store';
 
-const DEFAULTS = { version: 1, items: [], lightTheme: false };
+const DEFAULTS: Payload = { version: 1, items: [], lightTheme: false };
 const historyFile = (): string => path.join(mocks.userData, 'history.json');
 
 beforeEach(async () => {
