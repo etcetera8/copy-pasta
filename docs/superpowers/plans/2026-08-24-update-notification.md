@@ -581,6 +581,23 @@ Change the electron import at the top of `src/main/update-check.ts`:
 import { app, shell } from 'electron';
 ```
 
+**Delete the lint suppression above `releaseUrl`.** Task 2 wrote that variable
+with no reader, so it needed a directive to pass lint. This task adds the
+reader, which makes the directive itself unused — and an unused directive is
+its own lint error. Remove both comment lines:
+
+```ts
+// Not read until openReleasePage() lands in Task 3.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+```
+
+leaving:
+
+```ts
+/** The release page for the update found, if any. Never crosses the bridge. */
+let releaseUrl: string | null = null;
+```
+
 Append to the file:
 
 ```ts
