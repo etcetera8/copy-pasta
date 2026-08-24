@@ -1,7 +1,8 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, ipcRenderer, Menu, Tray } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcRenderer, Menu, Tray } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import path from 'path';
-import robot from 'robotjs';
+import { startClipboardWatcher, stopClipboardWatcher } from './clipboard-watcher';
+import { registerIpc } from './ipc';
 // Injected by @electron-forge/plugin-vite.
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -16,11 +17,12 @@ const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     webPreferences: {
+      // Forge's Vite plugin emits both bundles into `.vite/build`, so the
+      // preload sits next to the main bundle rather than in `../preload/`.
       preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: true,
-      // Electron 12+ defaults this to true. Phase 1 keeps the renderer exactly
-      // as it was (node integration, no bridge); Phase 2 flips both.
-      contextIsolation: false,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
       devTools: true,
     },
     frame: false,
@@ -50,7 +52,7 @@ const createWindow = (): void => {
     {
       label: 'Toggle Light/Dark Mode',
       click: (): void => {
-        mainWindow.webContents.send('toggleTheme');
+        mainWindow.webContents.send('theme:toggle');
       }
     },
     { type: 'separator' },
@@ -78,7 +80,11 @@ const createWindow = (): void => {
   globalShortcut.register('CommandOrControl+Shift+V', (): void => {
     mainWindow.show();
   })
-  
+
+  // Clipboard capture belongs to main now: a sandboxed renderer cannot poll the
+  // system clipboard itself. New text arrives in the renderer as `clipboard:text`.
+  startClipboardWatcher();
+
   //#region auto-updater
   const version = document.getElementById('version');
   
@@ -106,6 +112,10 @@ const createWindow = (): void => {
 // Some APIs can only be used after this event occurs.
 app.on('ready', createWindow);
 
+app.on('will-quit', (): void => {
+  stopClipboardWatcher();
+});
+
 // Quit when all windows are closed.
 app.on('window-all-closed', (): void => {
   // On OS X it is common for applications and their menu bar
@@ -115,16 +125,10 @@ app.on('window-all-closed', (): void => {
   }
 });
 
-ipcMain.on('hide', () => {
-  app.hide();
-  robot.keyTap('v', 'command');
-});
-
-// Replaces remote.getCurrentWindow().hide(); the remote module was removed in
-// Electron 14. Phase 2 moves this behind the preload bridge.
-ipcMain.on('window:hide', () => {
-  BrowserWindow.getAllWindows()[0]?.hide();
-});
+// Every ipcMain handler now lives in ./ipc, reached only through the preload
+// bridge. Registered at module load: `ipcMain.handle` rejects a duplicate
+// channel, so it must not be per window.
+registerIpc();
 
 if (process.platform == 'darwin') {
   app.dock.hide();
