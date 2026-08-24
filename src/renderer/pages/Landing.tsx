@@ -1,20 +1,24 @@
 import { observer } from 'mobx-react';
-import { FC, useEffect, useState } from 'react';
-import { DebounceInput } from 'react-debounce-input';
+import { ChangeEvent, FC, useEffect, useState } from 'react';
 import type { Item } from '../../shared/types';
 import Row from '../components/Row';
 import { DAY_IN_MILLISECONDS } from "../constants";
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { ClipboardStore } from '../store/clipboardStore';
 import '../styles/landing.scss';
+
+const SEARCH_DEBOUNCE_MS = 500;
 
 interface IProps {
   store: ClipboardStore;
 }
 
 export const Landing: FC<IProps>= observer(({ store }) => {
-  const  [intervalId, setIntervalId] = useState<NodeJS.Timeout>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [pageNumber, setPageNumber] = useState<number>(1);
+  // The input stays fully controlled and responsive; only the filtering that
+  // walks the whole history waits for typing to stop.
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, SEARCH_DEBOUNCE_MS);
 
   useEffect(() => {
     // Clipboard polling lives in the main process now; new text arrives here.
@@ -22,7 +26,6 @@ export const Landing: FC<IProps>= observer(({ store }) => {
     const offToggleTheme = window.copyPasta.onToggleTheme(() => {
       store.toggleTheme();
     });
-    checkForExpiredHistoryInterval();
     store.clearExpired();
     document.addEventListener('keydown', escapeListener, false);
 
@@ -30,9 +33,17 @@ export const Landing: FC<IProps>= observer(({ store }) => {
       offClipboardText();
       offToggleTheme();
       document.removeEventListener('keydown', escapeListener, false);
-      if (intervalId) clearInterval(intervalId);
     }
   }, [])
+
+  // The handle stays local to the effect. It used to live in `useState`, which
+  // meant the `[]`-deps cleanup closed over the first render's `null` and the
+  // interval was never cleared -- it outlived every unmount and reload, still
+  // holding the store it was created with.
+  useEffect(() => {
+    const id = setInterval(() => store.clearExpired(), DAY_IN_MILLISECONDS);
+    return () => clearInterval(id);
+  }, [store]);
 
   // Driven by the store rather than poked at from the toggle handler, so a
   // theme restored from history.json applies once hydration lands.
@@ -65,30 +76,20 @@ export const Landing: FC<IProps>= observer(({ store }) => {
     store.togglePin(item.id);
   }
 
-  //TODO: Move up out of component
-  const handleSearch = (e: any): void => {
-    const { value } = e.target;
-    setSearchTerm(value);
+  const handleSearch = (e: ChangeEvent<HTMLInputElement>): void => {
+    setSearchTerm(e.target.value);
   }
 
   const paginateData = (array: Item[], pageSize = 13): Item[] => (
     array.slice(0, pageNumber * pageSize)
   )
 
-  const checkForExpiredHistoryInterval = (): void => {
-    setIntervalId(setInterval(() => {
-      store.clearExpired();
-    }, DAY_IN_MILLISECONDS))
-  }
-
   return(
       <main>
         <h2>Copy Pasta</h2>
 
         <section className="controls">
-          <DebounceInput
-            minLength={1}
-            debounceTimeout={500}
+          <input
             autoFocus
             className="search"
             type="text"
@@ -105,7 +106,7 @@ export const Landing: FC<IProps>= observer(({ store }) => {
           </div>
           {/* One list for both cases: `results` falls back to the full ordered
               history when the query is empty. */}
-          {paginateData(store.results(searchTerm)).map((v, i) => {
+          {paginateData(store.results(debouncedSearchTerm)).map((v, i) => {
             return (
               <Row
                 value={v}
