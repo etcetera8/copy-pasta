@@ -33,6 +33,25 @@ icon: reach the window with **⌘⇧V**, or the pasta bowl in the menu bar.
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run make` | Build distributable installers |
+| `npm run site:dev` | Run the landing page locally |
+| `npm run site:build` | Build the landing page to `site/dist` |
+
+## Landing page
+
+`site/` holds a static landing page, built separately from the app:
+
+```bash
+npm run site:dev      # preview it
+npm run site:build    # output to site/dist (gitignored)
+```
+
+It ships no JavaScript and shares the app's palette through
+`src/shared/styles/_tokens.scss`. Two links are not live yet: the download
+points at the GitHub releases page, which has no releases, and the support
+link is a placeholder. `site/site.test.ts` asserts the placeholder so that
+hooking it up is a deliberate change.
+
+Nothing publishes it — no CI, no Pages configuration.
 
 ## How it works
 
