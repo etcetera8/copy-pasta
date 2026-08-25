@@ -286,3 +286,46 @@ describe('the request deadline', () => {
     expect(outcome).toBe('still pending');
   });
 });
+
+describe('openReleasePage', () => {
+  it('opens the release found by the check', async () => {
+    stubFetch(200, release('v1.1.0'));
+    const { checkForUpdate, openReleasePage } = await freshModule();
+    await checkForUpdate();
+
+    openReleasePage();
+
+    expect(mocks.openExternal).toHaveBeenCalledWith(
+      'https://github.com/etcetera8/copy-pasta/releases/tag/v1.1.0',
+    );
+  });
+
+  it('does nothing when no update was found', async () => {
+    stubFetch(404, { message: 'Not Found' });
+    const { checkForUpdate, openReleasePage } = await freshModule();
+    await checkForUpdate();
+
+    openReleasePage();
+
+    expect(mocks.openExternal).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when the check has not run', async () => {
+    stubFetch(200, release('v1.1.0'));
+    const { openReleasePage } = await freshModule();
+
+    openReleasePage();
+
+    expect(mocks.openExternal).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when the release carried no url', async () => {
+    stubFetch(200, { tag_name: 'v1.1.0' });
+    const { checkForUpdate, openReleasePage } = await freshModule();
+    await checkForUpdate();
+
+    openReleasePage();
+
+    expect(mocks.openExternal).not.toHaveBeenCalled();
+  });
+});

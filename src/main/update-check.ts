@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, shell } from 'electron';
 import type { UpdateInfo } from '../shared/types';
 
 /** `major.minor.patch`, with an optional `v`. Nothing else counts. */
@@ -38,8 +38,6 @@ const RELEASES_API = 'https://api.github.com/repos/etcetera8/copy-pasta/releases
 const TIMEOUT_MS = 10_000;
 
 /** The release page for the update found, if any. Never crosses the bridge. */
-// Not read until openReleasePage() lands in Task 3.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 let releaseUrl: string | null = null;
 
 /** The one in-flight or settled check. */
@@ -98,4 +96,16 @@ async function fetchLatest(): Promise<UpdateInfo | null> {
 export function checkForUpdate(): Promise<UpdateInfo | null> {
   pending ??= fetchLatest();
   return pending;
+}
+
+/**
+ * Open the release page for the update found, in the user's browser.
+ *
+ * Takes no argument on purpose. The renderer cannot hand main a URL to open:
+ * passing a renderer-supplied string to `shell.openExternal` is exactly the
+ * open-ended capability this app's preload bridge exists to avoid. Main opens
+ * the URL it already holds from its own check, or does nothing.
+ */
+export function openReleasePage(): void {
+  if (releaseUrl) void shell.openExternal(releaseUrl);
 }
