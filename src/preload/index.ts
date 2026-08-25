@@ -32,6 +32,8 @@ const api: CopyPastaApi = {
   hideWindow: () => ipcRenderer.send('window:hide'),
   hideAndPaste: () => ipcRenderer.send('window:hide-and-paste'),
   getVersion: () => ipcRenderer.invoke('app:version'),
+  getUpdateInfo: () => ipcRenderer.invoke('update:check'),
+  openReleasePage: () => ipcRenderer.send('update:open'),
 };
 
 contextBridge.exposeInMainWorld('copyPasta', api);

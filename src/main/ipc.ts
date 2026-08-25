@@ -3,6 +3,7 @@ import robot from 'robotjs';
 import type { HistoryData } from '../shared/types';
 import { noteWrite } from './clipboard-watcher';
 import { load, save } from './history-store';
+import { checkForUpdate, openReleasePage } from './update-check';
 
 /**
  * Every channel the preload bridge can reach. Registered once, at module load
@@ -26,6 +27,14 @@ export function registerIpc(): void {
   });
 
   ipcMain.handle('app:version', () => app.getVersion());
+
+  // Returns the memoized promise, so a renderer that mounts after the check
+  // already resolved still gets the answer.
+  ipcMain.handle('update:check', () => checkForUpdate());
+
+  ipcMain.on('update:open', () => {
+    openReleasePage();
+  });
 
   ipcMain.on('window:hide', () => {
     BrowserWindow.getAllWindows()[0]?.hide();

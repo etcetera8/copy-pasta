@@ -32,7 +32,7 @@ export default defineConfig({
       formats: ['cjs'],
     },
     rollupOptions: {
-      external: ['robotjs', 'electron', 'electron-squirrel-startup', 'electron-updater'],
+      external: ['robotjs', 'electron', 'electron-squirrel-startup'],
     },
   },
 });

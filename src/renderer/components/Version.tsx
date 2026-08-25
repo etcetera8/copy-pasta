@@ -1,4 +1,5 @@
 import { FC, useEffect, useState } from 'react';
+import type { UpdateInfo } from '../../shared/types';
 import '../styles/version.scss';
 
 /**
@@ -17,6 +18,7 @@ import '../styles/version.scss';
  */
 export const Version: FC = () => {
   const [version, setVersion] = useState<string | null>(null);
+  const [update, setUpdate] = useState<UpdateInfo | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -36,7 +38,44 @@ export const Version: FC = () => {
     };
   }, []);
 
+  // Separate from the version fetch so a slow or failed update check can never
+  // hold back the version string.
+  useEffect(() => {
+    let live = true;
+
+    void window.copyPasta
+      .getUpdateInfo()
+      .then((info) => {
+        if (live) setUpdate(info);
+      })
+      .catch(() => {
+        // No update to offer. Silence is the correct outcome.
+      });
+
+    return () => {
+      live = false;
+    };
+  }, []);
+
   if (version === null) return null;
 
-  return <p className="version">{`Version ${version}`}</p>;
+  return (
+    <p className="version">
+      {`Version ${version}`}
+      {update && (
+        <>
+          {' \u00b7 '}
+          {/* A button, not a link: there is no href to follow. Main holds the
+              URL, and this only asks it to open. */}
+          <button
+            type="button"
+            className="update-link"
+            onClick={(): void => window.copyPasta.openReleasePage()}
+          >
+            {`${update.version} available`}
+          </button>
+        </>
+      )}
+    </p>
+  );
 };
