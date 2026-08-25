@@ -48,4 +48,7 @@ History is stored as JSON in the app's user-data directory
 (`~/Library/Application Support/Copy Pasta/history.json` on macOS). Unpinned
 entries expire after a week; pinned entries are kept indefinitely.
 
-Auto-update is wired but **dormant** — no publish provider is configured yet.
+On launch the app checks GitHub Releases for a newer version. If one exists, the
+version line offers it and opens the release page in your browser — downloads are
+installed by hand. There is no silent auto-update: that needs a signed macOS
+build, which this project does not have.
