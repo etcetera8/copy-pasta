@@ -38,6 +38,10 @@ export type CopyPastaApi = {
   hideWindow: () => void;
   hideAndPaste: () => void;
   getVersion: () => Promise<string>;
+  /** Resolves `null` when there is no newer release, or the check failed. */
+  getUpdateInfo: () => Promise<UpdateInfo | null>;
+  /** Opens the release page main found. No-op when there is no update. */
+  openReleasePage: () => void;
 };
 
 declare global {
