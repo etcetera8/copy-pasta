@@ -1,9 +1,9 @@
 import { app, BrowserWindow, globalShortcut, Menu, Tray } from 'electron';
-import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { startClipboardWatcher, stopClipboardWatcher } from './clipboard-watcher';
 import { flush } from './history-store';
 import { registerIpc } from './ipc';
+import { checkForUpdate } from './update-check';
 // Injected by @electron-forge/plugin-vite.
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -86,27 +86,21 @@ const createWindow = (): void => {
   // system clipboard itself. New text arrives in the renderer as `clipboard:text`.
   startClipboardWatcher();
 
-  //#region auto-updater
-  // The `document` / `ipcRenderer` block that used to sit here (bug 10) is
-  // gone. It was renderer code running in main, so `createWindow` threw a
-  // ReferenceError every launch -- and Electron's default handler for an
-  // uncaught main-process exception is a modal NSAlert, which `app.dock.hide()`
-  // keeps off screen. The main process sat wedged behind an invisible dialog
-  // and answered no IPC at all, so the window stayed blank and `history:load`
-  // never resolved. Phase 5 owns rendering the version string in the renderer;
-  // this phase only removes what cannot run here, because history cannot
-  // survive a restart while main is deadlocked.
+  // One update check per launch, once the renderer has painted. No timer: a
+  // check per launch is enough for an app that ships rarely, and this codebase
+  // has already shipped one leaked `setInterval` that outlived every unmount
+  // (see `Landing.tsx`). Nothing here can leak.
   //
-  // Update checks stay dormant: there is no publish provider configured, so
-  // `checkForUpdatesAndNotify()` would emit an unhandled `error` and wedge the
-  // app the same way. These two listeners are inert until Phase 5 wires it up.
-  autoUpdater.on('update-available', () => {
-    mainWindow.webContents.send('update_available');
+  // `electron-updater` used to sit here with two listeners that never fired.
+  // It is electron-builder's updater -- it reads metadata electron-forge does
+  // not emit -- and its macOS path needs a Developer ID signature this app
+  // does not have. It is gone; `update-check` reports a new release and the
+  // user installs it themselves.
+  mainWindow.once('ready-to-show', () => {
+    // Fire and forget: the result is collected over `update:check`, and
+    // `checkForUpdate` never rejects.
+    void checkForUpdate();
   });
-  autoUpdater.on('update-downloaded', () => {
-    mainWindow.webContents.send('update_downloaded');
-  });
-  //#endregion
 };
 
 
