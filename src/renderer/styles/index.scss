@@ -13,6 +13,22 @@ body {
   padding: 0;
   height: 100vh;
   background: $black;
+  // The list is sized to fit, so the document itself must never scroll --
+  // scrolling is what used to drag the list border under the fixed footer.
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+}
+
+main {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  // Clearance for the fixed version footer in the bottom-left corner.
+  padding-bottom: 30px;
 }
 
 .light-theme {

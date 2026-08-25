@@ -7,9 +7,22 @@ $lightThemeBlue: #0451A5;
   border: 1px solid $blue;
   width: 80%;
   margin: 0 auto;
-  min-height: 50vh;
-  position: relative;
-  padding-bottom: 64px;
+  // Takes the space left over under the title and controls. `min-height: 0`
+  // lets it shrink below its content in a short window rather than pushing
+  // the page taller than the viewport.
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.row-list {
+  // The page never scrolls; if the user pages past what fits, the overflow
+  // scrolls here instead, leaving the border and footer where they are.
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .even {

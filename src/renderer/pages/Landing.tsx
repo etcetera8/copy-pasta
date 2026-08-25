@@ -1,9 +1,10 @@
 import { observer } from 'mobx-react';
-import { ChangeEvent, FC, useEffect, useState } from 'react';
+import { ChangeEvent, FC, useEffect, useRef, useState } from 'react';
 import type { Item } from '../../shared/types';
 import Row from '../components/Row';
 import { DAY_IN_MILLISECONDS } from "../constants";
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { useFittedPageSize } from '../hooks/useFittedPageSize';
 import { ClipboardStore } from '../store/clipboardStore';
 import '../styles/landing.scss';
 
@@ -14,6 +15,7 @@ interface IProps {
 }
 
 export const Landing: FC<IProps>= observer(({ store }) => {
+  const listRef = useRef<HTMLDivElement | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [pageNumber, setPageNumber] = useState<number>(1);
   // The input stays fully controlled and responsive; only the filtering that
@@ -80,9 +82,14 @@ export const Landing: FC<IProps>= observer(({ store }) => {
     setSearchTerm(e.target.value);
   }
 
-  const paginateData = (array: Item[], pageSize = 13): Item[] => (
-    array.slice(0, pageNumber * pageSize)
-  )
+  // `results` falls back to the full ordered history when the query is empty.
+  const results = store.results(debouncedSearchTerm);
+  // A page is however many rows the window can actually show, so the document
+  // never scrolls and "Show More" means "there are rows you cannot see".
+  const pageSize = useFittedPageSize(listRef, 0, results.length);
+  const visible = results.slice(0, pageNumber * pageSize);
+  // Nothing left to reveal -- either everything fits, or paging has caught up.
+  const hasMore = results.length > visible.length;
 
   return(
       <main>
@@ -104,27 +111,36 @@ export const Landing: FC<IProps>= observer(({ store }) => {
             <span className="table-head">Content</span>
             <span className="table-head">Date</span>
           </div>
-          {/* One list for both cases: `results` falls back to the full ordered
-              history when the query is empty. */}
-          {paginateData(store.results(debouncedSearchTerm)).map((v, i) => {
-            return (
-              <Row
-                value={v}
-                key={v.id}
-                handleClick={addToClipboard}
-                handleDelete={removeFromHistory}
-                handlePin={handlePin}
-                isEven={i % 2 === 0}
-                pinned={v.pinned}
-              />
-            );
-          })}
-          <button
-            className="btn load-more"
-            onClick={(): void => setPageNumber(pageNumber + 1)}
-          >
-            Show More
-          </button>
+          {/* One list for both cases: search results and full history. The
+              page is sized to this box, so it only ever scrolls once the user
+              has asked for more rows than the window can hold. */}
+          <div className="row-list" ref={listRef}>
+            {visible.map((v, i) => {
+              return (
+                <Row
+                  value={v}
+                  key={v.id}
+                  handleClick={addToClipboard}
+                  handleDelete={removeFromHistory}
+                  handlePin={handlePin}
+                  isEven={i % 2 === 0}
+                  pinned={v.pinned}
+                />
+              );
+            })}
+          </div>
+          {/* Held at a fixed height whether or not the button is showing, so
+              the measured row area never changes underneath the measurement. */}
+          <div className="load-more-slot">
+            {hasMore && (
+              <button
+                className="btn load-more"
+                onClick={(): void => setPageNumber(pageNumber + 1)}
+              >
+                Show More
+              </button>
+            )}
+          </div>
         </section>
       </main>
     )

@@ -57,13 +57,17 @@
     font-weight: bold;
   }
 
+  .load-more-slot {
+    flex: none;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .load-more {
-    margin: 0 auto 15px auto;
-    display: block;
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    margin: 0;
+    align-self: center;
   }
 
   .search {

@@ -26,6 +26,28 @@ function stubBridge() {
   return bridge;
 }
 
+/**
+ * jsdom has no layout: every element measures zero. These stubs give the
+ * fitted-page-size hook something real to measure.
+ */
+function stubLayout({ rowHeight, listHeight }: { rowHeight: number; listHeight: number }) {
+  const rect = vi
+    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+    .mockImplementation(function (this: HTMLElement) {
+      const height = this.classList.contains('row') ? rowHeight : 0;
+      return { height, width: 0, top: 0, left: 0, right: 0, bottom: height, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    });
+  const client = vi
+    .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
+    .mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains('row-list') ? listHeight : 0;
+    });
+  return (): void => {
+    rect.mockRestore();
+    client.mockRestore();
+  };
+}
+
 describe('Landing', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -108,6 +130,86 @@ describe('Landing', () => {
     const rows = container.querySelectorAll('.row');
     expect(rows).toHaveLength(1);
     expect(rows[0].getAttribute('data-content')).toBe('call foo(bar)');
+  });
+
+  describe('Show More', () => {
+    const storeWith = (n: number): ClipboardStore => {
+      const store = new ClipboardStore();
+      for (let i = 0; i < n; i++) store.add(`item ${i}`);
+      return store;
+    };
+    const showMore = (c: HTMLElement): HTMLButtonElement | null =>
+      [...c.querySelectorAll<HTMLButtonElement>('.load-more')].find(
+        (b) => b.textContent?.includes('Show More'),
+      ) ?? null;
+
+    it('is hidden when the history is empty', () => {
+      const { container } = render(<Landing store={storeWith(0)} />);
+      expect(showMore(container)).toBeNull();
+    });
+
+    it('is hidden when every item already fits on the first page', () => {
+      const { container } = render(<Landing store={storeWith(13)} />);
+      expect(container.querySelectorAll('.row')).toHaveLength(13);
+      expect(showMore(container)).toBeNull();
+    });
+
+    it('is shown when items are hidden past the first page', () => {
+      const { container } = render(<Landing store={storeWith(14)} />);
+      expect(container.querySelectorAll('.row')).toHaveLength(13);
+      expect(showMore(container)).not.toBeNull();
+    });
+
+    it('disappears once the last hidden item has been revealed', () => {
+      const { container } = render(<Landing store={storeWith(14)} />);
+      fireEvent.click(showMore(container)!);
+      expect(container.querySelectorAll('.row')).toHaveLength(14);
+      expect(showMore(container)).toBeNull();
+    });
+
+    /**
+     * The reported bug: a 12-item history with a fixed page size of 13 meant
+     * the button could never appear, while the list still ran well past the
+     * bottom of an 800x600 window. The page is measured now, so 12 items in a
+     * space that holds 4 leaves 8 hidden -- and the button says so.
+     */
+    it('appears when fewer items fit on screen than the page default', () => {
+      const restore = stubLayout({ rowHeight: 72, listHeight: 290 });
+      try {
+        const { container } = render(<Landing store={storeWith(12)} />);
+        expect(container.querySelectorAll('.row')).toHaveLength(4);
+        expect(showMore(container)).not.toBeNull();
+      } finally {
+        restore();
+      }
+    });
+
+    it('shows more rows in a taller window', () => {
+      const restore = stubLayout({ rowHeight: 72, listHeight: 730 });
+      try {
+        const { container } = render(<Landing store={storeWith(12)} />);
+        expect(container.querySelectorAll('.row')).toHaveLength(10);
+        expect(showMore(container)).not.toBeNull();
+      } finally {
+        restore();
+      }
+    });
+
+    it('hides when a search narrows the results to one page', () => {
+      const { container } = render(<Landing store={storeWith(20)} />);
+      expect(showMore(container)).not.toBeNull();
+
+      fireEvent.change(container.querySelector('.search')!, {
+        target: { value: 'item 1' },
+      });
+      act(() => {
+        vi.advanceTimersByTime(600);
+      });
+
+      // "item 1", "item 10".."item 19" -- 11 matches, one page.
+      expect(container.querySelectorAll('.row')).toHaveLength(11);
+      expect(showMore(container)).toBeNull();
+    });
   });
 
   it('unsubscribes from both bridge subscriptions on unmount', () => {
