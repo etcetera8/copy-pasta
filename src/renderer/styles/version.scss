@@ -16,3 +16,20 @@ $lightThemeGold: #CD9731;
 .light-theme .version {
   color: $lightThemeGold;
 }
+
+// A button for semantics, styled as inline text: it sits mid-sentence in the
+// version line, so it must not look or space like a control.
+.update-link {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    opacity: 1;
+  }
+}
