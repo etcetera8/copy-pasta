@@ -95,6 +95,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe('checkForUpdate', () => {
@@ -231,5 +232,57 @@ describe('checkForUpdate', () => {
     // The renderer may mount well after ready-to-show fired. It still gets
     // the answer -- this is why the promise is handed out, not an event.
     await expect(checkForUpdate()).resolves.toEqual({ version: '1.1.0' });
+  });
+});
+
+/**
+ * A fetch that never settles on its own. Only the abort signal can end it,
+ * which is the whole point: it stands in for a connection that opens and then
+ * goes silent -- the case a status code can never tell you about.
+ */
+function hangingFetch() {
+  return vi.fn<typeof fetch>(
+    (_url, init) =>
+      new Promise<Response>((_resolve, reject) => {
+        init!.signal!.addEventListener('abort', () => reject(init!.signal!.reason));
+      }),
+  );
+}
+
+describe('the request deadline', () => {
+  it('bounds the request at ten seconds', async () => {
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
+    stubFetch(404, { message: 'Not Found' });
+    const { checkForUpdate } = await freshModule();
+
+    await checkForUpdate();
+
+    expect(timeout).toHaveBeenCalledWith(10_000);
+  });
+
+  it('aborts a connection that opens and then goes silent', async () => {
+    // The real signal, really aborting -- only the deadline is shortened so
+    // the test does not take ten seconds.
+    vi.spyOn(AbortSignal, 'timeout').mockImplementation(() => AbortSignal.timeout(20));
+    vi.stubGlobal('fetch', hangingFetch());
+    const { checkForUpdate } = await freshModule();
+
+    await expect(checkForUpdate()).resolves.toBeNull();
+  });
+
+  it('would otherwise hang forever, which is why the deadline exists', async () => {
+    // Control for the test above. With a signal that never fires, the promise
+    // never settles -- and the renderer awaits this same promise, so the
+    // version line would stay blank for the life of the session.
+    vi.spyOn(AbortSignal, 'timeout').mockImplementation(() => new AbortController().signal);
+    vi.stubGlobal('fetch', hangingFetch());
+    const { checkForUpdate } = await freshModule();
+
+    const outcome = await Promise.race([
+      checkForUpdate(),
+      new Promise((resolve) => setTimeout(() => resolve('still pending'), 100)),
+    ]);
+
+    expect(outcome).toBe('still pending');
   });
 });
