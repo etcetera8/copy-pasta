@@ -40,6 +40,32 @@
 
   .pin-btn {
     width: 60px;
+    line-height: 0;
+
+    // The pin art is applied as a mask rather than an `img` so it paints in
+    // `currentColor` and picks up the light-theme override below. The SVGs
+    // declare only a viewBox, so the box is sized here and `contain` scales
+    // the art into it.
+    .pin-icon {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      background-color: currentColor;
+      transition: transform 0.2s;
+
+      -webkit-mask: url('../assets/pin.svg') center / contain no-repeat;
+      mask: url('../assets/pin.svg') center / contain no-repeat;
+    }
+
+    // Filled pin once the item is pinned.
+    &[aria-pressed='true'] .pin-icon {
+      -webkit-mask-image: url('../assets/pin-filled.svg');
+      mask-image: url('../assets/pin-filled.svg');
+    }
+
+    &:hover .pin-icon {
+      transform: scale(1.15);
+    }
   }
 
   .delete-btn, .pin-btn {
@@ -106,7 +132,7 @@
       }
     }
 
-    .delete-btn {
+    .delete-btn, .pin-btn {
       color: #811F3F;
     }
 

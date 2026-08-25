@@ -34,16 +34,17 @@ const Row = ({ value, handleClick, handleDelete, handlePin, isEven, pinned}: Row
     </span>
     <span className="date">{dateFormat.format(new Date(value.id))}</span>
 
-    {!pinned &&
-      <button className='pin-btn' onClick={(): void => handlePin(value)}>
-        unpinned
-      </button>
-    }
-    {pinned &&
-      <button className='pin-btn' onClick={(): void => handlePin(value)}>
-        pinned
-      </button>
-    }
+    <button
+      className="pin-btn"
+      onClick={(): void => handlePin(value)}
+      aria-pressed={pinned}
+      aria-label={pinned ? 'Unpin' : 'Pin'}
+      title={pinned ? 'Unpin' : 'Pin'}
+    >
+      {/* Filled vs outline is chosen in CSS off `aria-pressed`, so the icon
+          can be masked to `currentColor` and follow the active theme. */}
+      <span className="pin-icon" aria-hidden="true" />
+    </button>
 
     <button className="delete-btn" onClick={(): void => handleDelete(value.id)}>&#10005;</button>
   </div>
