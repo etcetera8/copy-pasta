@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, Menu, Tray } from 'electron';
+import { app, BrowserWindow, globalShortcut, Menu, nativeImage, Tray } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { startClipboardWatcher, stopClipboardWatcher } from './clipboard-watcher';
@@ -74,8 +74,14 @@ const createWindow = (): void => {
     }
   ]);
 
-  const iconPath = path.join(__dirname, 'bowl.png');
-  appIcon = new Tray(iconPath);
+  // A macOS template image: black artwork plus an alpha mask, which the OS
+  // recolours itself -- white against a dark menu bar, black against a light
+  // one, and inverted while the menu is open. `createFromPath` also picks up
+  // the `@2x` file sitting beside this one, so the icon stays sharp on Retina
+  // instead of being upscaled from 16px.
+  const icon = nativeImage.createFromPath(path.join(__dirname, 'bowlTemplate.png'));
+  icon.setTemplateImage(true);
+  appIcon = new Tray(icon);
   appIcon.setToolTip('Copy pasta');
   appIcon.setContextMenu(contextMenu);
   globalShortcut.register('CommandOrControl+Shift+V', (): void => {

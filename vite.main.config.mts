@@ -11,11 +11,16 @@ function copyTrayIcon(): Plugin {
   return {
     name: 'copy-pasta:copy-tray-icon',
     generateBundle() {
-      this.emitFile({
-        type: 'asset',
-        fileName: 'bowl.png',
-        source: fs.readFileSync(path.resolve(process.cwd(), 'src/main/bowl.png')),
-      });
+      // Both densities, and the exact filenames matter: `nativeImage` finds the
+      // `@2x` variant by convention, and the `Template` suffix is what marks
+      // the artwork as a macOS template image.
+      for (const name of ['bowlTemplate.png', 'bowlTemplate@2x.png']) {
+        this.emitFile({
+          type: 'asset',
+          fileName: name,
+          source: fs.readFileSync(path.resolve(process.cwd(), 'src/main', name)),
+        });
+      }
     },
   };
 }

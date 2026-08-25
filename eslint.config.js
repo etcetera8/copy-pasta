@@ -13,4 +13,13 @@ export default tseslint.config(
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
+  {
+    // Build-time scripts run under Node, not Electron. `no-undef` is already
+    // off for the .ts sources (typescript-eslint handles it there), so these
+    // plain .mjs files are the only place the globals need declaring.
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: { Buffer: 'readonly', console: 'readonly', process: 'readonly' },
+    },
+  },
 );
