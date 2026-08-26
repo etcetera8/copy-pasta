@@ -4,16 +4,21 @@ import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 /**
- * The landing page ships no JavaScript, so there is no component to render.
+ * The landing page has no components of its own to render. Its one piece of
+ * JavaScript is Buy Me a Coffee's third-party widget, which injects the
+ * support button at runtime -- so a static parse sees the <script> tag but
+ * never the button it produces.
+ *
  * What can still go wrong is the markup losing something it must not lose:
- * a broken download link, a support link quietly shipped as a placeholder,
- * a feature card dropped in an edit.
+ * a broken download link, a support widget pointed at the wrong account, a
+ * feature card dropped in an edit.
  *
  * These tests parse index.html and assert that contract.
  */
 
 const DOWNLOAD_URL = 'https://github.com/etcetera8/copy-pasta/releases/latest';
-const SUPPORT_PLACEHOLDER = '#';
+const BMC_SRC = 'https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js';
+const BMC_SLUG = 'etcetera8';
 
 let doc: Document;
 
@@ -29,20 +34,27 @@ describe('landing page', () => {
     expect(link?.getAttribute('href')).toBe(DOWNLOAD_URL);
   });
 
-  it('offers a support link', () => {
-    const link = doc.querySelector('[data-testid="support"]');
-    expect(link).not.toBeNull();
-    expect(link?.textContent).toMatch(/coffee/i);
+  it('embeds the buy-me-a-coffee widget', () => {
+    const script = doc.querySelector('script[data-name="bmc-button"]');
+    expect(script).not.toBeNull();
+    expect(script?.getAttribute('src')).toBe(BMC_SRC);
   });
 
   /**
-   * Deliberately asserts the placeholder. This test is the tripwire: when the
-   * real buy-me-a-coffee URL lands, this test fails, and whoever changes it
-   * has to update SUPPORT_PLACEHOLDER on purpose rather than by accident.
+   * The slug decides whose account the money reaches, so a typo here is a
+   * silent failure that looks fine on the page. Pinned deliberately: changing
+   * the destination should mean changing this line on purpose.
    */
-  it('still has the support link as a known placeholder', () => {
-    const link = doc.querySelector('[data-testid="support"]');
-    expect(link?.getAttribute('href')).toBe(SUPPORT_PLACEHOLDER);
+  it('points the widget at the right account', () => {
+    const script = doc.querySelector('script[data-name="bmc-button"]');
+    expect(script?.getAttribute('data-slug')).toBe(BMC_SLUG);
+    expect(script?.getAttribute('data-text')).toMatch(/coffee/i);
+  });
+
+  it('has no leftover placeholder support link', () => {
+    // The widget supplies the button now; a surviving [data-testid="support"]
+    // would mean two coffee buttons, one of them still pointing at '#'.
+    expect(doc.querySelector('[data-testid="support"]')).toBeNull();
   });
 
   it('describes all five features', () => {

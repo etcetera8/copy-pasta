@@ -52,11 +52,6 @@
           >
             Download
           </a>
-          <!-- TODO: replace with the real buy-me-a-coffee URL. site.test.ts
-               asserts this placeholder, so that test fails when it changes. -->
-          <a class="btn btn--secondary" data-testid="support" href="#">
-            ☕ Buy me a coffee
-          </a>
         </div>
 
         <p class="hero__platform">For macOS</p>
@@ -115,6 +110,27 @@
           </li>
           <li><span class="how__num">3</span> Click an entry — it pastes.</li>
         </ol>
+      </section>
+
+      <section class="support">
+        <!-- Buy Me a Coffee's own widget, embedded as they supply it. It
+             injects its own button into this section, so the markup here
+             renders nothing on its own and the button's look is BMC's rather
+             than .btn's. data-slug is the account the money reaches --
+             site.test.ts pins it. -->
+        <script
+          type="text/javascript"
+          src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js"
+          data-name="bmc-button"
+          data-slug="etcetera8"
+          data-color="#FF5F5F"
+          data-emoji=""
+          data-font="Cookie"
+          data-text="Buy me a coffee"
+          data-outline-color="#000000"
+          data-font-color="#ffffff"
+          data-coffee-color="#FFDD00"
+        ></script>
       </section>
     </main>
 

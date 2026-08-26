@@ -178,6 +178,15 @@ kbd {
 
 // --- How it works -------------------------------------------------------
 
+// Holds the Buy Me a Coffee widget. The injected button is a block-level
+// container of BMC's own making, so this centres it with flex rather than
+// text-align, which would not reach it.
+.support {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 64px;
+}
+
 .how {
   border-top: 1px solid rgba(tokens.$blue, 0.2);
   padding: 56px 0 72px;
