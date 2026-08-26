@@ -919,7 +919,9 @@ Expected: the Release workflow succeeds, and:
 ```bash
 gh release view v1.0.0
 ```
-lists both `Copy Pasta-1.0.0-arm64.dmg` and `Copy Pasta-1.0.0-x64.dmg`.
+lists both DMGs. Note GitHub replaces spaces in asset filenames with periods, so they
+appear as `Copy.Pasta-1.0.0-arm64.dmg` and `Copy.Pasta-1.0.0-x64.dmg`. That is expected,
+not a failure.
 
 - [ ] **Step 3: Confirm the download button works end to end**
 
@@ -930,6 +932,13 @@ Visit the landing page, click Download, and confirm it lands on a release page l
 Download the **x64** DMG on this Intel Mac, drag to Applications, and open it — expect the Gatekeeper prompt, then allow it via System Settings and confirm the app runs and ⌘⇧V works after granting Accessibility.
 
 **The arm64 DMG remains unverified at runtime.** CI proves it builds, contains its native binary, and is correctly signed; it cannot prove it launches. Launch it once on an Apple Silicon Mac before announcing — and check that history loads, not merely that the window appears.
+
+If that launch fails with a code-signature error, `codesign` on the *bundle* is the wrong place
+to look. `--deep` seals the unpacked `.node` binaries as resources rather than signing them:
+measured on 2026-08-26, `prebuilds/darwin-x64/node.napi.node` is `not signed at all` and
+`darwin-arm64/node.napi.node` carries only robotjs's own linker signature. So the `Ad-hoc sign`
+step is not what makes robotjs loadable on Apple Silicon. The fix would be signing
+`app.asar.unpacked/**/*.node` individually, before signing the bundle.
 
 ---
 
