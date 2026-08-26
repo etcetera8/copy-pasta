@@ -44,6 +44,51 @@ costs a wording change at most.
 Mac and reliably rots. Cost: a workflow to maintain, which is small here because nothing compiles
 and nothing is signed with a real identity.
 
+## 2a. Packaging fix — precondition for any release
+
+**The packaged app has never run.** Discovered on 2026-08-26 while verifying Forge's output for
+§3.1, and it blocks everything else in this document: without it, a release ships a DMG that
+installs a dead app.
+
+Two individually reasonable settings combine badly:
+
+- `@electron-forge/plugin-vite` sets `packagerConfig.ignore` to drop everything not under `/.vite`
+  (`VitePlugin.js:124`), so **no `node_modules` is packaged at all**. Its assumption is that Vite
+  bundles every dependency.
+- `vite.main.config.mts` marks `robotjs`, `electron-squirrel-startup`, and `electron-updater` as
+  Rollup **externals**, so Vite deliberately does not bundle them.
+
+Nothing bundles those three and nothing ships them. The built `main.js` requires all three at
+module top level, so it throws before `app.on('ready')` ever fires. Confirmed by listing
+`app.asar`: 14 entries, no `node_modules`. The failure is invisible in development because
+`npm start` resolves from the real `node_modules` on disk, and invisible at runtime for the reason
+in [[electron-main-uncaught-exception-halts-app]] — the process stays alive with no window.
+
+### The fix, verified end to end
+
+Three changes, each necessary:
+
+1. **Bundle what can be bundled.** Narrow the externals in `vite.main.config.mts` to `electron`
+   (supplied by the runtime) and `robotjs` (native, cannot be inlined).
+   `electron-squirrel-startup` is 36 lines of pure JS and bundles cleanly.
+2. **Ship what cannot be bundled.** Define `packagerConfig.ignore` in `forge.config.ts` keeping
+   `/.vite` plus `node_modules/robotjs` and `node_modules/node-gyp-build` (robotjs's runtime
+   prebuild loader). The Vite plugin only supplies its own `ignore` when one is not already set, so
+   this replaces that behaviour through a supported path rather than fighting it.
+   `AutoUnpackNativesPlugin` then unpacks the `.node` binaries via its path-agnostic
+   `**/{.**,**}/**/*.node` glob, with no extra configuration.
+3. **Stop rebuilding native modules.** Set `rebuildConfig: { onlyModules: [] }`. Once robotjs is
+   present, `@electron/rebuild` tries to compile it with node-gyp and fails. The rebuild is also
+   pointless — robotjs is N-API with prebuilds for every platform — and impossible when packaging
+   for an architecture other than the host's, which §2 requires.
+
+**Verification standard.** A window appearing is not sufficient evidence. The packaged x64 app was
+launched with `--remote-debugging-port=9333` and driven over the DevTools protocol:
+`getVersion()` returned `"1.0.0"` and `loadHistory()` resolved. Both are IPC round-trips that only
+complete if main is alive and answering, which is the evidence standard
+[[electron-main-uncaught-exception-halts-app]] requires. Reaching `createWindow()` at all also
+proves every top-level `require` succeeded, including the `dlopen` of robotjs's `.node`.
+
 ## 3. Release workflow
 
 `.github/workflows/release.yml`, triggered by pushing a `v*` tag, on `macos-latest`.
@@ -58,16 +103,13 @@ artifacts out of the release.
 
 `package.json` is at `1.0.0`, so the first tag is `v1.0.0`.
 
-### 3.1 Asset naming
+### 3.1 Asset naming — verified, no work needed
 
-Both architectures derive a DMG name from appName and version and will collide. The makers must
-emit explicitly distinct names — `Copy-Pasta-1.0.0-arm64.dmg` and `Copy-Pasta-1.0.0-x64.dmg` — so
-the release lists two unambiguous downloads. Actual Forge output paths are to be confirmed against
-a real `make` run during implementation rather than assumed.
-
-Both runs also share `out/`, and a second `make` can clear what the first produced. The workflow
-must either collect each DMG to a staging path immediately after its run, or confirm that Forge
-separates output by architecture — again verified against a real run, not assumed.
+Confirmed against a real `make` run on 2026-08-26. `MakerDMG` already names its output
+`Copy Pasta-1.0.0-x64.dmg` / `Copy Pasta-1.0.0-arm64.dmg`, so the architecture is in the filename
+and there is no collision to fix. `out/make` is also **not** cleared between runs: after building
+both architectures in sequence, both DMGs were present. No renaming and no staging step is
+required.
 
 ### 3.2 Ad-hoc signing is mandatory
 
@@ -75,6 +117,11 @@ The primary technical risk. Apple Silicon requires every binary to carry at leas
 signature in order to launch at all: on arm64, "unsigned" means "will not start", which is a
 different and more severe failure than the Intel case of "shows a warning". Packaging rewrites the
 bundle and invalidates the signature Electron ships with.
+
+Measured on 2026-08-26: the x64 build is `not signed at all`, while the arm64 build carries an
+`adhoc, linker-signed` signature with `Info.plist=not bound` and `Sealed Resources=none` — the
+linker's own signature on the Electron binary, covering neither the bundle's resources nor its
+Info.plist. Re-signing ad-hoc over the finished bundle is what seals those.
 
 Choosing unsigned distribution therefore does **not** mean skipping signing. The build must ad-hoc
 sign (`identity: '-'`) and the workflow must assert the result with `codesign --verify` before
@@ -111,10 +158,18 @@ strings that file already forbids in visible text: `Windows`, `Linux`, and `TODO
 CI gates on the existing `lint` / `typecheck` / `test` scripts, plus the new site test from §5 and
 the `codesign --verify` assertion from §3.2.
 
+The §2a packaging fix cannot be covered by a unit test — it is a property of the packaged bundle,
+not of the source. It is guarded instead by a check on the built app: assert that `app.asar`
+contains `node_modules/robotjs`, and that an `app.asar.unpacked` `.node` binary exists for the
+target architecture. This catches a silent regression of the exact failure §2a describes, which is
+otherwise invisible until a user downloads it.
+
 **Known gap, accepted:** the development machine is an Intel Mac. The x64 DMG can be smoke-tested
 properly; the arm64 DMG — the one most users will download — ships verified only as far as "builds
 and is correctly signed". CI cannot prove it launches. Launching the arm64 DMG once on an
-Apple Silicon Mac is the recommended manual step before announcing the release.
+Apple Silicon Mac is the recommended manual step before announcing the release — and given §2a, it
+should be verified the same way: confirm a window appears *and* that history loads, not merely that
+the app icon shows up.
 
 ## 7. Out of scope
 
@@ -122,7 +177,11 @@ Apple Silicon Mac is the recommended manual step before announcing the release.
 - **Merging `feature/28-update-notification`.** That branch's update check queries
   `releases/latest` and currently 404s *because no release exists*, so this work is the precondition
   that makes it function. It also predates the landing page and needs a rebase. Kept separate.
-- **Removing `electron-updater`.** It is dead weight on master — two listeners registered,
-  `checkForUpdatesAndNotify()` never called, so it is inert rather than dangerous — and it does
-  bloat the bundle. Removing it touches the exact lines the branch above rewrites, so it is cleaned
-  up there to avoid a conflict.
+- **Removing `electron-updater` is now in scope**, reversing this document's first draft. It was
+  originally left alone to avoid conflicting with the branch above. That was written believing it
+  was merely inert dead weight; §2a shows it is require'd at the top of `main.js` and is therefore
+  one of the three direct causes of the packaged app not starting. Keeping it would mean shipping
+  its eight runtime dependencies (`fs-extra`, `js-yaml`, `lodash.*`, `semver`,
+  `builder-util-runtime`, …) purely to satisfy a `require` for code that never runs. It is deleted
+  here along with its two inert listeners; `feature/28-update-notification` deletes it too, so this
+  brings the branches closer together rather than further apart.
