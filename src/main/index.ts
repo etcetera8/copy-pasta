@@ -1,5 +1,4 @@
 import { app, BrowserWindow, globalShortcut, Menu, nativeImage, Tray } from 'electron';
-import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { startClipboardWatcher, stopClipboardWatcher } from './clipboard-watcher';
 import { flush } from './history-store';
@@ -94,28 +93,6 @@ const createWindow = (): void => {
   // Clipboard capture belongs to main now: a sandboxed renderer cannot poll the
   // system clipboard itself. New text arrives in the renderer as `clipboard:text`.
   startClipboardWatcher();
-
-  //#region auto-updater
-  // The `document` / `ipcRenderer` block that used to sit here (bug 10) is
-  // gone. It was renderer code running in main, so `createWindow` threw a
-  // ReferenceError every launch -- and Electron's default handler for an
-  // uncaught main-process exception is a modal NSAlert, which `app.dock.hide()`
-  // keeps off screen. The main process sat wedged behind an invisible dialog
-  // and answered no IPC at all, so the window stayed blank and `history:load`
-  // never resolved. Phase 5 owns rendering the version string in the renderer;
-  // this phase only removes what cannot run here, because history cannot
-  // survive a restart while main is deadlocked.
-  //
-  // Update checks stay dormant: there is no publish provider configured, so
-  // `checkForUpdatesAndNotify()` would emit an unhandled `error` and wedge the
-  // app the same way. These two listeners are inert until Phase 5 wires it up.
-  autoUpdater.on('update-available', () => {
-    mainWindow.webContents.send('update_available');
-  });
-  autoUpdater.on('update-downloaded', () => {
-    mainWindow.webContents.send('update_downloaded');
-  });
-  //#endregion
 };
 
 

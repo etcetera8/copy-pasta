@@ -37,7 +37,11 @@ export default defineConfig({
       formats: ['cjs'],
     },
     rollupOptions: {
-      external: ['robotjs', 'electron', 'electron-squirrel-startup', 'electron-updater'],
+      // Only these two cannot be bundled: `electron` is supplied by the
+      // runtime, and `robotjs` is a native module whose .node binary Rollup
+      // cannot inline. Everything else must be bundled, because the Forge
+      // Vite plugin ships no node_modules -- see forge.config.ts.
+      external: ['robotjs', 'electron'],
     },
   },
 });
