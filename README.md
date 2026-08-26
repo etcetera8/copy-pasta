@@ -45,14 +45,30 @@ npm run site:dev      # preview it
 npm run site:build    # output to site/dist (gitignored)
 ```
 
-It ships no JavaScript and shares the app's palette through
+It ships no JavaScript of its own and shares the app's palette through
 `src/shared/styles/_tokens.scss`, except for the mark itself (see
-[Icons](#icons)). Two links are not live yet: the download
-points at the GitHub releases page, which has no releases, and the support
-link is a placeholder. `site/site.test.ts` asserts the placeholder so that
-hooking it up is a deliberate change.
+[Icons](#icons)).
 
-Nothing publishes it — no CI, no Pages configuration.
+`.github/workflows/pages.yml` publishes it to GitHub Pages on every push to
+`master` that touches `site/` or the shared style tokens.
+
+## Releases
+
+Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds a DMG
+for both Apple Silicon and Intel, ad-hoc signs them, and attaches them to a
+GitHub release. The landing page's download button points at
+`releases/latest`.
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+The builds are **not** signed with an Apple Developer ID and are not
+notarized, so macOS blocks the first launch until the user allows it in
+System Settings → Privacy & Security. The landing page explains this.
+
+Ad-hoc signing is still done, and is not optional: an arm64 binary with no
+valid signature will not launch at all.
 
 ## Icons
 
