@@ -122,4 +122,7 @@ History is stored as JSON in the app's user-data directory
 (`~/Library/Application Support/Copy Pasta/history.json` on macOS). Unpinned
 entries expire after a week; pinned entries are kept indefinitely.
 
-Auto-update is wired but **dormant** — no publish provider is configured yet.
+There is no auto-update. `electron-updater` was removed rather than left dormant:
+nothing ever called `checkForUpdatesAndNotify()`, so it was costing eight runtime
+dependencies to satisfy a `require` for code that never ran. New versions are
+downloaded from the [releases page](https://github.com/etcetera8/copy-pasta/releases).
