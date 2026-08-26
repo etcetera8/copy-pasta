@@ -18,6 +18,16 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      # The DMG filenames come from package.json, not from the tag, so a tag
+      # that disagrees produces a release named v1.1.0 full of 1.0.0 files.
+      # Nothing downstream fails, and by then the tag is already public --
+      # so check before the ten-minute build rather than after.
+      - name: Tag must match package.json version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg=$(node -p "require('./package.json').version")
+          [ "$tag" = "$pkg" ] || { echo "tag $GITHUB_REF_NAME != package.json $pkg"; exit 1; }
+
       # yarn.lock is a v1 lockfile. The `yarn` on PATH is corepack's v4,
       # which refuses it outright, so pin v1 explicitly.
       - name: Install
@@ -35,10 +45,10 @@ jobs:
       # Both architectures land in out/make, which is not cleared between
       # runs, and the DMG names already carry the arch.
       - name: Build arm64
-        run: npx electron-forge make --arch=arm64
+        run: npx --no-install electron-forge make --arch=arm64
 
       - name: Build x64
-        run: npx electron-forge make --arch=x64
+        run: npx --no-install electron-forge make --arch=x64
 
       # A .node that never shipped produces no build error -- just an app
       # that opens nothing. Fail here instead of shipping that.
@@ -62,8 +72,8 @@ jobs:
       - name: Repackage signed DMGs
         run: |
           rm -f out/make/*.dmg
-          npx electron-forge make --arch=arm64 --skip-package
-          npx electron-forge make --arch=x64 --skip-package
+          npx --no-install electron-forge make --arch=arm64 --skip-package
+          npx --no-install electron-forge make --arch=x64 --skip-package
 
       - name: Publish release
         uses: softprops/action-gh-release@v2

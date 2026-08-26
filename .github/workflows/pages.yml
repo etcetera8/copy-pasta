@@ -8,6 +8,12 @@ on:
     paths:
       - 'site/**'
       - 'src/shared/styles/**'
+      # The build inputs count too: changing `base`, the site:build script,
+      # or a build dependency changes the output while site/ stays untouched,
+      # and the live page would silently keep serving the previous build.
+      - 'vite.site.config.mts'
+      - 'package.json'
+      - 'yarn.lock'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 

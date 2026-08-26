@@ -23,7 +23,7 @@ const config: ForgeConfig = {
     asar: true,
     ignore: (file: string): boolean => {
       if (!file) return false;
-      if (file.startsWith('/.vite')) return false;
+      if (file === '/.vite' || file.startsWith('/.vite/')) return false;
       if (file === '/node_modules') return false;
       return !RUNTIME_MODULES.some(
         (m) => file === m || file.startsWith(`${m}/`),
