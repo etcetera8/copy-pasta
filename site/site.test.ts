@@ -127,4 +127,21 @@ describe('landing page', () => {
     const description = doc.querySelector('meta[name="description"]');
     expect(description?.getAttribute('content')).toBeTruthy();
   });
+
+  /**
+   * The app is unsigned, so macOS refuses the first launch and the paste
+   * shortcut needs a permission the user must grant by hand. Someone who
+   * downloads it without being told either of those things has a broken
+   * app and no way to know why -- so the page has to say them, and this
+   * pins that it keeps saying them.
+   */
+  it('explains how to open an unsigned build', () => {
+    const install = doc.querySelector('[data-testid="install"]');
+    expect(install).not.toBeNull();
+
+    const text = install?.textContent ?? '';
+    expect(text).toMatch(/Privacy & Security/);
+    expect(text).toMatch(/Open Anyway/);
+    expect(text).toMatch(/Accessibility/);
+  });
 });
