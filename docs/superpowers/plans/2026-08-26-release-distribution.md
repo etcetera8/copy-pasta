@@ -354,13 +354,20 @@ Expected: `packaged app looks startable (arm64)`, exit 0.
 Prove the check has teeth by breaking the build deliberately:
 
 ```bash
-git stash push forge.config.ts
+cp forge.config.ts /tmp/forge.config.good.ts
+git show HEAD:forge.config.ts > /dev/null   # sanity: the fix is committed
+git show b0d62d1~1:forge.config.ts > forge.config.ts
 rm -rf out && npx electron-forge make --arch=arm64 > /dev/null 2>&1
 node tools/check-packaged-app.js arm64; echo "exit=$?"
-git stash pop
+cp /tmp/forge.config.good.ts forge.config.ts && rm /tmp/forge.config.good.ts
+git diff --exit-code forge.config.ts && echo "restored"
 ```
 
-Expected: it prints `missing from app.asar: /node_modules/robotjs/index.js` and `exit=1`. A check that cannot fail is worthless — confirm this before moving on.
+`git stash` does **not** work here: Task 3 already committed `forge.config.ts`, so there is
+nothing to stash and the rebuild would silently reproduce the *good* bundle -- "proving" the
+check works while proving nothing. Restore the pre-fix content from history instead.
+
+Expected: it prints all three failures -- both missing asar entries and the missing unpacked native binary -- and `exit=1`, then `restored`. A check that cannot fail is worthless — confirm this before moving on.
 
 - [ ] **Step 4: Rebuild the good version and commit**
 
