@@ -9,6 +9,8 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
+    "site:dev": "vite --config vite.site.config.mts",
+    "site:build": "vite build --config vite.site.config.mts",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",

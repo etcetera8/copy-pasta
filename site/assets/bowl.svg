@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="A steaming bowl of pasta">
+  <!--
+    Copy Pasta's mark. One file so the landing page hero and the browser tab
+    icon cannot drift apart; before this they were separate drawings, and the
+    tab fell back to the 16x16 menu-bar glyph, which is white and so was
+    invisible on a light tab.
+
+    The colours are $blue and $green from src/shared/styles/_tokens.scss,
+    written out as hex because an SVG loaded through <link rel="icon"> or
+    <img> gets no stylesheet: the page's CSS cannot reach inside it. Keep them
+    in step with the tokens by hand if the palette moves.
+
+    Note for editors: this file is parsed as XML, not HTML, so a comment may
+    not contain a double hyphen. That is a fatal parse error rather than a
+    warning, and a browser shows it as a broken image with nothing logged, so
+    the repo's usual double-hyphen em dash cannot be used in here.
+
+    This lives under site/ rather than src/shared/ because the landing page is
+    its only consumer: the app draws its menu-bar icon from a redrawn
+    counterpart, src/main/bowlTemplate.svg. Keeping it here is also what makes
+    it reachable in dev. Vite serves site/ as the root, and a path climbing out
+    of the root resolves to nothing and falls through to the SPA fallback, so
+    the mark renders as a broken image under `yarn site:dev` while the
+    production build, which rewrites the reference to a hashed asset, looks
+    fine. site.test.ts pins both references against that.
+  -->
+  <g fill="none" stroke="#B5CEA8" stroke-linecap="round" stroke-width="4" opacity=".65">
+    <path d="M45 30c0-7 9-7 9-14s-9-7-9-14" />
+    <path d="M63 32c0-6 8-6 8-12s-8-6-8-12" />
+    <path d="M81 30c0-7 9-7 9-14s-9-7-9-14" />
+  </g>
+  <path
+    fill="none"
+    stroke="#B5CEA8"
+    stroke-linecap="round"
+    stroke-width="5"
+    d="M28 62c6-14 16-20 32-20s26 6 32 20M40 62c4-10 10-14 20-14s16 4 20 14"
+  />
+  <path fill="#569CD6" d="M16 64h88a44 44 0 0 1-88 0z" />
+  <path fill="none" stroke="#569CD6" stroke-width="6" stroke-linecap="round" d="M44 110h32" />
+</svg>
