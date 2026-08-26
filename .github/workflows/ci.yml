@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  check:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # yarn.lock is a v1 lockfile. The `yarn` on PATH is corepack's v4,
+      # which refuses it outright, so pin v1 explicitly.
+      - name: Install
+        run: npx --yes yarn@1.22.22 install --frozen-lockfile
+
+      - name: Lint
+        run: npx --yes yarn@1.22.22 lint
+
+      - name: Typecheck
+        run: npx --yes yarn@1.22.22 typecheck
+
+      - name: Test
+        run: npx --yes yarn@1.22.22 test
+
+      # The packaging bug that made every build of this app non-functional
+      # went unnoticed for months because nothing ever built the package --
+      # it produces no build error and no crash, just an app that opens
+      # nothing. `package` rather than `make`: the guard reads the .app
+      # bundle, so there is no reason to spend minutes building a DMG.
+      - name: Package
+        run: npx --no-install electron-forge package --arch=arm64
+
+      - name: Check the package is startable
+        run: node tools/check-packaged-app.js arm64
