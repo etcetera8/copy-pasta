@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!--
+    The menu-bar icon, and the source for bowlTemplate.png / bowlTemplate@2x.png beside it.
+    Regenerate with tools/render-tray-icon.sh, verify with
+    node tools/check-tray-icon.js.
+
+    This is the mark from site/assets/bowl.svg redrawn for 16px rather
+    than scaled down to it. At that size the hero's 4-5px strokes land on
+    roughly half a pixel and grey out, so: the two airy noodle arcs become one
+    filled mound, the three steam wisps keep their count but gain weight, and
+    the foot under the bowl is gone, its 2px gap from the bowl having closed
+    up into a smudge. What survives is the silhouette, which is the part that has
+    to be recognisable in a 22pt menu bar.
+
+    The mound is deliberately narrower than the bowl. Drawn the same width it
+    unions with the bowl into a plain circle and stops reading as a bowl at
+    all; the visible shoulder either side of the rim is what sells it.
+
+    The steam is spaced 21 apart rather than the hero's 18. Three wisps six
+    units thick sit close enough at hero size, but 16px leaves under half a
+    pixel between them and they silt up into one grey bar. The wisps are also
+    recentred on x=60: the hero's sit right of the bowl's centre, which goes
+    unnoticed at 120px and looks like a mistake at 16.
+
+    Pure black on transparency on purpose: macOS reads only the alpha channel
+    of a template image and paints the result itself, so this comes out white
+    on a dark menu bar, black on a light one, and inverted while the menu is
+    open. Any colour here would be discarded. setTemplateImage(true) in
+    src/main/index.ts is what opts into that.
+
+    Note for editors: parsed as XML, so no double hyphen inside this comment.
+    It is a fatal parse error, reported as nothing more than a broken image.
+  -->
+  <g fill="none" stroke="#000" stroke-linecap="round" stroke-width="6">
+    <path d="M34 38c0-7 9-7 9-14s-9-7-9-14" />
+    <path d="M55 40c0-6 8-6 8-12s-8-6-8-12" />
+    <path d="M76 38c0-7 9-7 9-14s-9-7-9-14" />
+  </g>
+  <path fill="#000" d="M34 64c3-11 13-17 26-17s23 6 26 17z" />
+  <path fill="#000" d="M16 64h88a44 44 0 0 1-88 0z" />
+</svg>

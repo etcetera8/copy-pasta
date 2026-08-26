@@ -79,6 +79,9 @@ const createWindow = (): void => {
   // one, and inverted while the menu is open. `createFromPath` also picks up
   // the `@2x` file sitting beside this one, so the icon stays sharp on Retina
   // instead of being upscaled from 16px.
+  //
+  // `setTemplateImage` is a NativeImage method, not a Tray one, so the path
+  // has to be loaded here rather than handed straight to `new Tray()`.
   const icon = nativeImage.createFromPath(path.join(__dirname, 'bowlTemplate.png'));
   icon.setTemplateImage(true);
   appIcon = new Tray(icon);

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
@@ -84,6 +84,42 @@ describe('landing page', () => {
     // Comments are not in textContent, so the TODO marking the support URL
     // does not trip this -- only a TODO that leaked into visible copy would.
     expect(doc.body.textContent).not.toMatch(/TODO/i);
+  });
+
+  /**
+   * The mark is one file referenced twice: once as the tab icon, once as the
+   * hero image. Both of these went wrong while it was being wired up, and
+   * neither failure is visible in a passing build.
+   *
+   * The path is checked against the filesystem because the reference used to
+   * climb out of site/ into src/. Vite's dev server serves site/ as its root
+   * and answers anything above it with the SPA fallback, so the hero came back
+   * as HTML and rendered as a broken image -- while `site:build`, which
+   * resolves the reference and emits a hashed copy, produced a working page.
+   * Only `yarn site:dev` showed it.
+   */
+  it('points the tab icon and the hero at the same file, and that file exists', () => {
+    const icon = doc.querySelector('link[rel="icon"]')?.getAttribute('href');
+    const hero = doc.querySelector('.hero__mark')?.getAttribute('src');
+
+    expect(icon).toBe('./assets/bowl.svg');
+    expect(hero).toBe(icon);
+    expect(existsSync(join(__dirname, icon!))).toBe(true);
+  });
+
+  /**
+   * A standalone .svg is parsed as XML, where a double hyphen inside a comment
+   * is fatal rather than a warning. The mark carries a long explanatory
+   * comment and the repo writes '--' for an em dash everywhere else, so this
+   * is an easy edit to make; the only symptom is a broken image, with nothing
+   * logged and the build still green.
+   */
+  it('keeps the mark parseable as XML', () => {
+    const svg = readFileSync(join(__dirname, 'assets/bowl.svg'), 'utf8');
+    const parsed = new DOMParser().parseFromString(svg, 'image/svg+xml');
+
+    expect(parsed.querySelector('parsererror')).toBeNull();
+    expect(parsed.documentElement.tagName).toBe('svg');
   });
 
   it('has a title and a description for link previews', () => {

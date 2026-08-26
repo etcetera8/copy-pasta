@@ -44,26 +44,15 @@ main {
   text-align: center;
   padding: 80px 0 64px;
 
+  // The per-part rules that used to sit here (&__steam, &__noodles, &__bowl,
+  // &__base) are gone with the inline SVG. The mark is an <img> now, and CSS
+  // does not cross that boundary -- those colours live in the SVG itself, at
+  // site/assets/bowl.svg, where the tab icon can reach them too.
   &__mark {
+    display: block;
+    margin: 0 auto;
     width: 120px;
     height: 120px;
-  }
-
-  &__steam {
-    stroke: tokens.$green;
-    opacity: 0.65;
-  }
-
-  &__noodles {
-    stroke: tokens.$green;
-  }
-
-  &__bowl {
-    fill: tokens.$blue;
-  }
-
-  &__base {
-    stroke: tokens.$blue;
   }
 
   &__title {

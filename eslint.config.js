@@ -8,18 +8,28 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-require-imports': 'off',
+    // The scripts under tools/ are plain CommonJS run by hand from a terminal,
+    // not part of any bundle, so they need the Node globals that the default
+    // browser-facing config leaves undeclared. `no-undef` is already off for
+    // the .ts sources, which typescript-eslint handles. Listed out rather than
+    // pulled from the `globals` package to avoid a dependency for six names.
+    files: ['tools/**/*.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: {
+        require: 'readonly',
+        module: 'writable',
+        process: 'readonly',
+        console: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+      },
     },
   },
   {
-    // Build-time scripts run under Node, not Electron. `no-undef` is already
-    // off for the .ts sources (typescript-eslint handles it there), so these
-    // plain .mjs files are the only place the globals need declaring.
-    files: ['scripts/**/*.mjs'],
-    languageOptions: {
-      globals: { Buffer: 'readonly', console: 'readonly', process: 'readonly' },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
 );

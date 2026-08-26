@@ -8,35 +8,26 @@
       name="description"
       content="A clipboard history utility for macOS. Everything you copy, searchable and re-pastable from a global shortcut. Stays on your machine."
     />
-    <link rel="icon" type="image/png" href="./assets/bowl.png" />
+    <link rel="icon" type="image/svg+xml" href="./assets/bowl.svg" />
     <link rel="stylesheet" href="./styles/site.scss" />
   </head>
   <body>
     <main>
       <section class="hero">
-        <!-- Drawn rather than linked: the only bowl asset in the repo is a
-             16x16 tray icon, which would be a blurry mess at hero size. -->
-        <svg
+        <!-- The same file the tab icon points at, so the mark on the page
+             and the mark in the tab cannot drift. It is an <img> rather than
+             inline SVG because <link rel="icon"> can only take a URL, and one
+             drawing referenced twice beats two drawings kept in sync by
+             hand. The trade is that site.scss can no longer colour it: a
+             stylesheet does not cross into an image, so the palette lives in
+             the SVG itself now. -->
+        <img
           class="hero__mark"
-          viewBox="0 0 120 120"
-          role="img"
-          aria-label="A steaming bowl of pasta"
-        >
-          <g fill="none" stroke-linecap="round" stroke-width="4">
-            <path class="hero__steam" d="M45 30c0-7 9-7 9-14s-9-7-9-14" />
-            <path class="hero__steam" d="M63 32c0-6 8-6 8-12s-8-6-8-12" />
-            <path class="hero__steam" d="M81 30c0-7 9-7 9-14s-9-7-9-14" />
-          </g>
-          <path
-            class="hero__noodles"
-            fill="none"
-            stroke-linecap="round"
-            stroke-width="5"
-            d="M28 62c6-14 16-20 32-20s26 6 32 20M40 62c4-10 10-14 20-14s16 4 20 14"
-          />
-          <path class="hero__bowl" d="M16 64h88a44 44 0 0 1-88 0z" />
-          <path class="hero__base" d="M44 110h32" stroke-width="6" stroke-linecap="round" fill="none" />
-        </svg>
+          src="./assets/bowl.svg"
+          alt="A steaming bowl of pasta"
+          width="120"
+          height="120"
+        />
 
         <h1 class="hero__title">Copy Pasta</h1>
         <p class="hero__tagline">
