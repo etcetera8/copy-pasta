@@ -89,7 +89,9 @@ main {
 // Folded away by default: it matters enormously to someone whose download
 // will not open, and not at all to someone still deciding whether to try it.
 .install {
-  margin-top: 24px;
+  // Centred the same way .hero__tagline is: the hero centres inline content,
+  // but a max-width block still needs auto margins or it sits flush left.
+  margin: 24px auto 0;
   font-size: 14px;
   text-align: left;
   max-width: 520px;
