@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+# The workflow creates a release and uploads assets to it.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # yarn.lock is a v1 lockfile. The `yarn` on PATH is corepack's v4,
+      # which refuses it outright, so pin v1 explicitly.
+      - name: Install
+        run: npx --yes yarn@1.22.22 install --frozen-lockfile
+
+      - name: Lint
+        run: npx --yes yarn@1.22.22 lint
+
+      - name: Typecheck
+        run: npx --yes yarn@1.22.22 typecheck
+
+      - name: Test
+        run: npx --yes yarn@1.22.22 test
+
+      # Both architectures land in out/make, which is not cleared between
+      # runs, and the DMG names already carry the arch.
+      - name: Build arm64
+        run: npx electron-forge make --arch=arm64
+
+      - name: Build x64
+        run: npx electron-forge make --arch=x64
+
+      # A .node that never shipped produces no build error -- just an app
+      # that opens nothing. Fail here instead of shipping that.
+      - name: Check both packages are startable
+        run: |
+          node tools/check-packaged-app.js arm64
+          node tools/check-packaged-app.js x64
+
+      # Not optional despite shipping unsigned: an arm64 binary with no
+      # valid signature does not launch. This also seals the bundle
+      # resources, which the linker's own signature does not cover.
+      - name: Ad-hoc sign
+        run: |
+          for arch in arm64 x64; do
+            codesign --force --deep --sign - "out/Copy Pasta-darwin-$arch/Copy Pasta.app"
+            codesign --verify --deep --strict --verbose=2 "out/Copy Pasta-darwin-$arch/Copy Pasta.app"
+          done
+
+      # The DMGs were made before signing, so remake them around the signed
+      # bundles. Forge reuses the existing package rather than rebuilding it.
+      - name: Repackage signed DMGs
+        run: |
+          rm -f out/make/*.dmg
+          npx electron-forge make --arch=arm64 --skip-package
+          npx electron-forge make --arch=x64 --skip-package
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/make/*.dmg
+          generate_release_notes: true
+          fail_on_unmatched_files: true
