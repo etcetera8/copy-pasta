@@ -94,3 +94,6 @@ out/
 
 # Landing page build output
 site/dist/
+
+# Brainstorming companion mockups
+.superpowers/
