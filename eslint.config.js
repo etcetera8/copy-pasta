@@ -29,15 +29,14 @@ export default tseslint.config(
   {
     // Vitest tests under tools/ are .mjs rather than CommonJS -- vitest
     // refuses to be require()'d, so a .js test there fails before any test
-    // runs. sourceType is 'module' here (not 'commonjs' as above) so import
-    // syntax parses; the Node globals list is shorter because ESM has no
-    // require/module/__dirname of its own.
+    // runs. sourceType is 'module' here (not 'commonjs' as above, kept
+    // explicit for the contrast even though ESLint would infer it from the
+    // extension) so import syntax parses; Buffer is the only Node global
+    // these files actually reach for.
     files: ['tools/**/*.mjs'],
     languageOptions: {
       sourceType: 'module',
       globals: {
-        process: 'readonly',
-        console: 'readonly',
         Buffer: 'readonly',
       },
     },

@@ -80,6 +80,16 @@ function decode(buf) {
   // Undo the per-scanline filter each row carries in its leading byte.
   for (let y = 0; y < hdr.h; y++) {
     const filter = raw[y * (stride + 1)];
+    // filter is loop-invariant across x, so this belongs here -- a
+    // once-per-row header validation, checked alongside where the row's
+    // other fixed facts (its filter byte, its slice of `raw`) are read --
+    // rather than as a fifth arm re-tested on every pixel in the row. PNG
+    // defines only 0-4; anything else is a value this format never
+    // assigns, and letting it fall through silently as filter 0 (None)
+    // would be the same "treat unknown as harmless" mistake the
+    // IDAT-length check above exists to close off. The length check
+    // guarantees `filter` is never `undefined` here, so `> 4` is exact.
+    if (filter > 4) throw new Error(`row ${y}: unknown filter type ${filter}`);
     const line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
     for (let x = 0; x < stride; x++) {
       const a = x >= bpp ? img[y * stride + x - bpp] : 0;
@@ -96,11 +106,6 @@ function decode(buf) {
         const pc = Math.abs(p - c);
         v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
       }
-      // filter === 0 (None) needs no adjustment; anything else is a value
-      // this format never assigns, and letting it fall through silently
-      // (as filter 0) is the same "treat unknown as harmless" mistake the
-      // IDAT-length check above exists to close off.
-      else if (filter !== 0) throw new Error(`row ${y}: unknown filter type ${filter}`);
       img[y * stride + x] = v & 255;
     }
   }
