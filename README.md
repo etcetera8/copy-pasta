@@ -79,21 +79,31 @@ There are only two drawings of the pasta bowl, and they are not interchangeable:
 | `site/assets/bowl.svg` | The landing page hero, the browser tab icon, **and** the app icon |
 | `src/main/bowlTemplate.svg` | The menu-bar icon, via the PNGs beside it |
 
-`site/assets/bowl.svg` is one file referenced three times so the page, the
-tab, and the packaged app cannot drift apart. Because a `<link rel="icon">`
-takes a URL, it is an `<img>` on the page rather than inline SVG, and a
-stylesheet cannot reach inside an image — so this one drawing carries its own
-colours as hex instead of taking them from the tokens. That is the single
-exception to the shared palette.
+`site/assets/bowl.svg` is one file referenced three times, so there is no
+second drawing to keep in step. Because a `<link rel="icon">` takes a URL, it
+is an `<img>` on the page rather than inline SVG, and a stylesheet cannot
+reach inside an image — so this one drawing carries its own colours as hex
+instead of taking them from the tokens. That is the single exception to the
+shared palette.
+
+The three references are not equally safe, though. The page and the tab cannot
+drift: both resolve the SVG at build time, and `site.test.ts` pins those
+references. The app icon can. `assets/appIcon.icns` is a committed raster, so
+editing the SVG without re-running the render leaves the icon silently stale
+and nothing catches it — the colour check below only asks that the old raster
+still contains the mark, and the byte comparison only proves the stale file
+reached the bundle. That is the accepted cost of committing the icon instead
+of generating it during the build, which is what keeps Chrome off CI's
+critical path.
 
 `assets/appIcon.icns` is the icon Finder shows for the packaged app, and it is
 generated, not drawn: `tools/render-app-icon.sh` renders `site/assets/bowl.svg`
 at seven sizes and composites a plate behind it, so there is no third drawing
 to keep in step with the other two. The plate's geometry — Apple's 824/1024
-grid, a corner radius at 22.5% of the plate, rounded to an even pixel count so
-it centres exactly, and how much of the plate the mark itself spans — lives in
-that script's header rather than here, because it is derived and tuned there
-and would only go stale as a second copy.
+grid, the plate rounded to an even pixel count so it centres exactly, a corner
+radius at 22.5% of it, and how much of the plate the mark spans — lives in that
+script's header rather than here, because it is derived and tuned there and
+would only go stale as a second copy.
 
 ```bash
 ./tools/render-app-icon.sh    # bowl.svg -> assets/appIcon.icns

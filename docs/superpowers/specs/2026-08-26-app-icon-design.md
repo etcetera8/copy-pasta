@@ -90,8 +90,9 @@ The plate is rounded to an **even** number of pixels rather than to the nearest 
 gives an odd plate on an even canvas at two of the seven sizes — 13px at 16 and 103px at 128 — and
 an odd width cannot be centred in an even one, so Chrome snaps it a pixel off-centre (measured:
 margins of 2 left and 1 right at 16px). Rounding to even costs a 0.8% deviation from Apple's ratio
-at 128 and buys exact symmetry at every size. It matters most at 16, where one pixel is 6% of the
-icon.
+at 128 — and about 6% at 16, where the plate goes from 12.875 to 12 — and buys exact symmetry at
+every size. The trade is worth most at 16, which is also where the deviation is largest: one pixel
+is 6% of that icon, and an off-centre plate is visible in a way that a slightly small one is not.
 
 The plate is filled with `#1e1e1e`, the `$black` of `src/shared/styles/_tokens.scss`. Like the
 colours inside `bowl.svg` itself, it is written as hex rather than read from the tokens — Sass
@@ -114,6 +115,9 @@ to the script and a re-render.
 | `tools/render-app-icon.sh` | New. Renders the slices and builds the `.icns`. |
 | `tools/check-app-icon.js` | New. Verifies the `.icns`, and that it reached the bundle. |
 | `tools/lib/png.js` | New. The PNG decoder, extracted so both check scripts share it. |
+| `tools/lib/png.test.mjs` | New. Covers the decoder's four guards and the filter-undo loop. |
+| `tools/lib/icns.js` | New. The icns container parser, extracted for the same reason. |
+| `tools/lib/icns.test.mjs` | New. Covers the container guards, including trailing bytes. |
 | `assets/appIcon.icns` | New, committed. The generated icon. |
 | `tools/check-tray-icon.js` | Imports the decoder instead of defining it. No behaviour change. |
 | `forge.config.ts` | Sets `packagerConfig.icon` and `MakerDMG`'s `icon`. |
@@ -164,13 +168,18 @@ post-condition; "the file contains the mark" is the check script's.
 **Source mode**, no arguments, run after rendering. It parses the `icns` container and, for every
 slice whose payload is a PNG, decodes it and asserts three things:
 
-- it is the dimensions its slice type declares;
+- it is square. Deliberately not "the dimensions its slice type declares" — see the closing
+  paragraph of this section: the type-code table is exactly what this check refuses to hardcode.
+  `REQUIRED_SIZES` carries the guarantee that the sizes that matter are present;
 - it is not blank — at least 15% of pixels are non-transparent, the floor `check-tray-icon.js`
   already uses;
 - **the mark's colours are present, not only the plate's.** Counting pixels within 40 per channel
   of `#569CD6` and `#B5CEA8`, each must exceed 0.5% of the slice. This assertion applies to slices
-  of 128 and above only. At 16 the whole mark is about eleven pixels and its green survives mostly
-  as blends toward the plate, so asserting a colour floor there would fail on a correct icon.
+  of 128 and above only. The slice that forces this is the 32px `ic11`, whose green measures 0.2%
+  against the floor, because at that size the noodles and steam survive mostly as blends toward the
+  plate. Note it is not the 16px slice, despite the obvious guess: `iconutil` stores that one as
+  `ic04`, raw pixel data behind an `ARGB` magic, which is skipped before anything is decoded, so a
+  threshold aimed at 16 would be aimed at a slice this check never sees.
 
 That last assertion is the one that matters. If the SVG fails to load, Chrome still produces a
 perfectly good dark rounded square. That is a plausible-looking icon which would ship unnoticed; a
@@ -222,6 +231,16 @@ still failing if a required slice goes missing.
 - `MakerDMG`'s `icon` set to the same path, so the mounted volume shows the bowl rather than a
   generic disk.
 
+The check runs in **both** workflows, and `ci.yml` is the more important of the two.
+
+`.github/workflows/ci.yml` runs it on every pull request, against the arm64 package it already
+builds for the startability guard. That placement follows a decision this repo already made in
+`6fa98d8`, which moved lint, typecheck and test off the release tag and onto pull requests because
+"a failure surfaced after the tag was already public and the fix meant deleting and re-pushing a
+tag people may have fetched". A broken icon has exactly that property. One invocation suffices
+there: passing an arch runs the source-mode slice assertions before the byte comparison, so it
+covers both the committed artifact and the build.
+
 `.github/workflows/release.yml` gains a step after **Check both packages are startable**:
 
 ```yaml
@@ -237,7 +256,7 @@ invocation and this follows suit.
 
 ## 8. Testing
 
-There is one Vitest test, covering `tools/lib/png.js` and nothing else. This reverses an earlier
+There are two Vitest suites, covering `tools/lib/png.js` and `tools/lib/icns.js`. This reverses an earlier
 decision in this document, and the reason is worth recording: the original claim was that nothing
 here has unit-testable logic, which was true of a decoder that was a straight lift of working code
 and false the moment §6's guards were added to it. Those guards are now the thing standing between
@@ -246,6 +265,10 @@ backwards. The fixtures are built by mutating bytes of a real PNG the repo alrea
 how the failures were originally demonstrated.
 
 `vitest.config.mts` scopes `include` to `src/` and `site/`, so it gains a glob for `tools/`.
+
+`tools/lib/icns.js` was extracted for the same reason and on the same evidence: review of the
+check script found its container parser silently dropping one to seven trailing bytes, which is the
+class of thing a unit test surfaces and a passing icon never will.
 
 Nothing else here gets a Vitest test. There is no unit-testable logic in the shell script or the
 Forge config, and the packaged-bytes check covers the regression that matters more convincingly
@@ -268,7 +291,7 @@ new path, or `killall Finder`. Step 3 settles the question independently of what
 
 ## 9. Documentation
 
-The README's Icons section gains a row for `assets/appIcon.icns` and its regenerate/verify pair
+The README's Icons section gains prose for `assets/appIcon.icns` and its regenerate/verify pair
 beside the tray-icon ones. It must state that the app icon composites the hero mark rather than
 being a drawing of its own — that is the fact a future editor most needs, because it is the reason
 the table still describes only two drawings.

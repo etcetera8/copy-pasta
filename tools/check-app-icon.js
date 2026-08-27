@@ -52,9 +52,18 @@ const MARK_COLOURS = [
 // narrow enough that #1e1e1e cannot pass as either colour: the plate is 56
 // away from the blue on the red channel alone.
 const COLOUR_TOLERANCE = 40;
-// The mark is only unambiguously resolvable from 128 up. At 16 it spans
-// about eleven pixels and its green survives mostly as blends, so a colour
-// floor there would fail on a correct icon.
+// The slice that forces this is ic11, the 32px one: its green measures 0.2%
+// against the 0.5% floor below, because at that size the noodles and steam
+// survive mostly as blends toward the plate rather than as their own colour.
+// A floor applied there would fail on a correct icon.
+//
+// Not 16px, despite the obvious guess -- there is no 16px PNG in this
+// container at all. iconutil stores that size as ic04, raw pixel data behind
+// an 'ARGB' magic, which the loop below skips before anything is decoded. A
+// threshold aimed at 16 would be aimed at a slice this check never sees.
+//
+// 64px would also be defensible (its green measures 2.0%, comfortably clear),
+// but that is a change rather than a correction, so this stays at 128.
 const COLOUR_CHECKED_FROM = 128;
 const REQUIRED_SIZES = [128, 256, 512, 1024];
 
