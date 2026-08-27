@@ -16,12 +16,20 @@
  */
 const zlib = require('node:zlib');
 
+// Every PNG starts with these eight bytes. Checking them once here, rather
+// than trusting off = 8 and walking whatever follows as if it were chunk
+// headers, is what turns "handed something that isn't a PNG" into a clear
+// error instead of the decoder wandering off into arbitrary bytes.
+const MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
 /**
  * @param {Buffer} buf  A complete PNG file.
- * @returns {{ w: number, h: number, depth: number, color: number, img: Buffer, stride: number }}
+ * @returns {{ w: number, h: number, img: Buffer, stride: number }}
  *          `img` is raw RGBA, 4 bytes per pixel, `stride` bytes per row.
  */
 function decode(buf) {
+  if (!buf.subarray(0, 8).equals(MAGIC)) throw new Error('not a PNG (bad signature)');
+
   let off = 8;
   let hdr = null;
   const idat = [];
@@ -29,17 +37,45 @@ function decode(buf) {
     const len = buf.readUInt32BE(off);
     const type = buf.toString('ascii', off + 4, off + 8);
     if (type === 'IHDR') {
-      hdr = { w: buf.readUInt32BE(off + 8), h: buf.readUInt32BE(off + 12), depth: buf[off + 16], color: buf[off + 17] };
+      hdr = {
+        w: buf.readUInt32BE(off + 8),
+        h: buf.readUInt32BE(off + 12),
+        depth: buf[off + 16],
+        color: buf[off + 17],
+        // Byte 20 of IHDR (after width, height, depth, colour type,
+        // compression method, filter method). Interlaced files are still
+        // colour type 6 depth 8, so without checking this they sail past
+        // the guard below and get decoded with the wrong scanline layout --
+        // no error, just garbage pixels.
+        interlace: buf[off + 20],
+      };
     }
     if (type === 'IDAT') idat.push(buf.subarray(off + 8, off + 8 + len));
     off += 12 + len;
   }
   if (!hdr) throw new Error('no IHDR');
   if (hdr.color !== 6 || hdr.depth !== 8) throw new Error(`expected 8-bit RGBA, got colour type ${hdr.color} depth ${hdr.depth}`);
+  if (hdr.interlace !== 0) throw new Error(`interlaced PNGs are not supported (interlace method ${hdr.interlace})`);
 
   const raw = zlib.inflateSync(Buffer.concat(idat));
   const bpp = 4;
   const stride = hdr.w * bpp;
+
+  // A short IDAT stream (a truncated file, or a mismatched IHDR pointing at
+  // more rows than the pixel data actually has) must not decode silently.
+  // Without this check, reading past the end of `raw` returns `undefined`
+  // for both the filter byte and every sample in the row: `undefined`
+  // matches no filter branch below (so it is silently treated as filter 0,
+  // "None"), and `undefined & 255` is 0, so the missing rows just become
+  // transparent black instead of raising an error. That is exactly the kind
+  // of half-fabricated image the tray-icon and app-icon checks exist to
+  // catch elsewhere in the pixel data -- it should not be possible to sneak
+  // one past them via the header instead.
+  const need = hdr.h * (stride + 1);
+  if (raw.length !== need) {
+    throw new Error(`IDAT holds ${raw.length} bytes, expected ${need} for ${hdr.w}x${hdr.h}`);
+  }
+
   const img = Buffer.alloc(hdr.h * stride);
   // Undo the per-scanline filter each row carries in its leading byte.
   for (let y = 0; y < hdr.h; y++) {
@@ -60,10 +96,19 @@ function decode(buf) {
         const pc = Math.abs(p - c);
         v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
       }
+      // filter === 0 (None) needs no adjustment; anything else is a value
+      // this format never assigns, and letting it fall through silently
+      // (as filter 0) is the same "treat unknown as harmless" mistake the
+      // IDAT-length check above exists to close off.
+      else if (filter !== 0) throw new Error(`row ${y}: unknown filter type ${filter}`);
       img[y * stride + x] = v & 255;
     }
   }
-  return { ...hdr, img, stride };
+  // Only the fields callers actually use. `depth` and `color` were tautological
+  // above this point -- decode() throws unless they are exactly 8 and 6 -- and
+  // returning the whole header struct would have silently exposed `interlace`
+  // too.
+  return { w: hdr.w, h: hdr.h, img, stride };
 }
 
 module.exports = { decode };
