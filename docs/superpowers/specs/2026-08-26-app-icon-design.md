@@ -23,10 +23,16 @@ wrong from the outside:
 `Contents/Resources/electron.icns` and never rewrites `CFBundleIconFile`. The plist therefore reads
 `electron.icns` whether the icon was set or not. Only the file's bytes distinguish the two cases.
 
-**A wrong path is a warning, not an error.** `platform.js:159` emits
-`Could not find icon "..." with extension ".icns", skipping this app icon format` and continues.
-A typo in the config produces a successful `make`, a successful release, and the default icon —
-with nothing in the output that a passing build draws attention to.
+**A wrong path produces no diagnostic whatsoever.** `platform.js:159` treats an unresolvable icon
+as a warning rather than an error, emitting
+`Could not find icon "..." with extension ".icns", skipping this app icon format` and continuing.
+Under Forge even that is suppressed: `@electron-forge/core`'s `api/package.js:226` passes
+`quiet: true`, and packager's `warning()` prints only `if (!quiet)` (`common.js:32`).
+
+This was verified rather than assumed. Breaking the path deliberately and repackaging produced a
+clean build, a valid 116MB DMG, a bundle whose `Info.plist` was indistinguishable from a correct
+one, and Electron's default icon — with not one line of output anywhere pointing at it. The byte
+comparison in §6 is not a second opinion; it is the only signal that exists.
 
 Because the app calls `app.dock?.hide()` (`src/main/index.ts:152`), this icon is never a dock icon.
 It is what Finder, the Applications folder, Spotlight, and the DMG window show.
@@ -80,6 +86,13 @@ radius of 185.4 — 22.5% of the plate. These are proportions, applied at every 
 This is not cosmetic pedantry: a full-bleed icon reads as roughly 20% larger than every neighbour
 in the Applications folder.
 
+The plate is rounded to an **even** number of pixels rather than to the nearest one. The exact ratio
+gives an odd plate on an even canvas at two of the seven sizes — 13px at 16 and 103px at 128 — and
+an odd width cannot be centred in an even one, so Chrome snaps it a pixel off-centre (measured:
+margins of 2 left and 1 right at 16px). Rounding to even costs a 0.8% deviation from Apple's ratio
+at 128 and buys exact symmetry at every size. It matters most at 16, where one pixel is 6% of the
+icon.
+
 The plate is filled with `#1e1e1e`, the `$black` of `src/shared/styles/_tokens.scss`. Like the
 colours inside `bowl.svg` itself, it is written as hex rather than read from the tokens — Sass
 cannot reach into a Chrome render driven from a shell script — so it carries the same
@@ -131,7 +144,18 @@ under the ten filenames `iconutil` expects (`icon_16x16.png`, `icon_16x16@2x.png
 `iconutil -c icns` to produce `assets/appIcon.icns`.
 
 Chrome's path is hardcoded to `/Applications/Google Chrome.app`, as `render-tray-icon.sh` already
-does, and fails loudly if absent. CI never renders.
+does, and fails loudly if absent. `node` and `iconutil` are guarded the same way. CI never renders.
+
+**Every render is checked for a non-empty output file.** `set -e` does not cover the Chrome call at
+all: headless Chrome exits 0 when it fails to render, verified three ways — a missing input file
+yields a 220-byte blank PNG and exit 0, an unrecognised flag yields a 182-byte PNG and exit 0, and a
+missing output directory writes no file whatsoever and still exits 0. Without an explicit test the
+script prints seven success lines and packs a well-formed `.icns` full of blank plates. The sibling
+tray script gets a weaker version of this guarantee by accident, because it screenshots to a temp
+path and then copies; this one writes straight into the iconset, so it has to check on purpose.
+
+Content validation stays in §6 rather than here. "The renderer produced a file" is this script's
+post-condition; "the file contains the mark" is the check script's.
 
 ## 6. Checking
 
@@ -166,10 +190,23 @@ that distinguishes the two outcomes, because the filename and the plist entry ar
 way.
 
 The PNG decoder currently inline in `tools/check-tray-icon.js` moves to `tools/lib/png.js` and both
-scripts import it. The body is lifted unchanged; the signature widens from a file path to a
-`Buffer`, because the icns slices are already in memory and writing them back out to temp files
-just to read them again would be silly. `check-tray-icon.js` gains a `readFileSync` at its one call
-site.
+scripts import it. The signature widens from a file path to a `Buffer`, because the icns slices are
+already in memory and writing them back out to temp files just to read them again would be silly.
+`check-tray-icon.js` gains a `readFileSync` at its one call site.
+
+The decoder also gains four guards it did not have while it was inline, added after code review of
+the extraction found two of them exploitable. It previously trusted its input completely, which was
+defensible when its only caller handed it a file the repo had rendered seconds earlier, and stops
+being defensible now that the next caller hands it a payload carved out of an `icns` by a slicer of
+our own. The guards reject a bad PNG signature, a non-8-bit-RGBA image, an interlaced image, and an
+IDAT stream whose length disagrees with the declared height.
+
+The interlace and length guards are the ones that matter. Without the length check, a short buffer
+does not fail — `raw[y * (stride + 1)]` reads `undefined`, which matches no filter branch and is
+treated as filter 0, and `undefined & 255` is `0`, so absent rows become transparent black. A
+32×32 image declared 32×64 decodes silently at 18.7% coverage, clearing the 15% blank floor. A
+decoder that manufactures plausible pixels from missing bytes works directly against what §6 is
+for.
 
 The check does not hardcode a table of icns slice type codes. `iconutil` chooses between `icp4`,
 `is32`/`s8mk` and similar for the small slices, and that choice is Apple's to change. Instead the
@@ -200,8 +237,19 @@ invocation and this follows suit.
 
 ## 8. Testing
 
-There is no Vitest test. Nothing here has unit-testable logic, and the packaged-bytes check covers
-the regression that matters more convincingly than an assertion about the config object would.
+There is one Vitest test, covering `tools/lib/png.js` and nothing else. This reverses an earlier
+decision in this document, and the reason is worth recording: the original claim was that nothing
+here has unit-testable logic, which was true of a decoder that was a straight lift of working code
+and false the moment §6's guards were added to it. Those guards are now the thing standing between
+a mis-sliced icns and an icon that ships looking deliberate, so leaving them unpinned would be
+backwards. The fixtures are built by mutating bytes of a real PNG the repo already ships, which is
+how the failures were originally demonstrated.
+
+`vitest.config.mts` scopes `include` to `src/` and `site/`, so it gains a glob for `tools/`.
+
+Nothing else here gets a Vitest test. There is no unit-testable logic in the shell script or the
+Forge config, and the packaged-bytes check covers the regression that matters more convincingly
+than an assertion about the config object would.
 
 Verification is:
 
