@@ -9,9 +9,12 @@
 #
 # Geometry, from Apple's macOS 11+ icon grid:
 #
-#   - The plate is 824/1024 of the canvas, centred. The remaining margin is
-#     transparent. This is not pedantry -- a full-bleed icon reads as roughly
-#     20% larger than every neighbour in the Applications folder.
+#   - The plate is 824/1024 of the canvas, rounded to an even number of
+#     pixels so it centres exactly -- an odd plate on an even canvas puts
+#     flex centring on a half-pixel and Chrome snaps it off to one side. The
+#     remaining margin is transparent. The ratio itself is not pedantry -- a
+#     full-bleed icon reads as roughly 20% larger than every neighbour in the
+#     Applications folder.
 #   - Its corner radius is 22.5% of the plate.
 #   - MARK_INSET is how much of the plate the mark spans. It was tuned by
 #     looking at the rendered 128 and 512 slices; bowl.svg's drawing is not
@@ -48,6 +51,7 @@ MARK_INSET=0.86
 chrome="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 [ -x "$chrome" ] || { echo "Google Chrome not found at $chrome" >&2; exit 1; }
 command -v iconutil >/dev/null 2>&1 || { echo "iconutil not found (macOS only)" >&2; exit 1; }
+command -v node >/dev/null 2>&1 || { echo "node not found" >&2; exit 1; }
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -57,9 +61,16 @@ mkdir -p "$iconset"
 render() { # size, outfile
   local size="$1" out="$2" geom
   # plate edge, corner radius, mark edge -- all in device pixels at this size.
+  #
+  # `geom` is declared bare above and assigned here as a separate statement
+  # on purpose: with `local geom=($(node -e ...))` on one line, `local` is
+  # the command whose exit status `set -e` sees, so a failing `node` would be
+  # masked and this guarantee would vanish silently. Do not merge these.
   geom=($(node -e "
     const s = $size;
-    const plate = Math.round(s * 824 / 1024);
+    // Rounded to an even number of pixels so flex centring lands on a whole
+    // pixel rather than a half one; see the header comment for why.
+    const plate = 2 * Math.round(s * 412 / 1024);
     process.stdout.write([
       plate,
       (plate * 0.225).toFixed(3),
@@ -80,7 +91,14 @@ render() { # size, outfile
     --screenshot="$out" \
     --window-size="$size,$size" \
     "file://$work/icon.html" >/dev/null 2>&1
-  echo "  rendered ${size}x${size}"
+  # Chrome exits 0 even when the screenshot didn't render -- a missing input
+  # HTML, an unrecognised flag, or an unwritable output all still exit 0, so
+  # `set -e` gives no coverage over the one step most likely to go wrong. A
+  # blank screenshot would otherwise ride silently through `iconutil` into a
+  # well-formed but empty-looking .icns -- exactly the failure mode this
+  # script's header spends two paragraphs warning about.
+  [ -s "$out" ] || { echo "Chrome wrote no screenshot at ${size}x${size}" >&2; exit 1; }
+  echo "  rendered ${size}x${size} -> $(basename "$out")"
 }
 
 # iconutil wants ten filenames, but they cover only seven distinct pixel
