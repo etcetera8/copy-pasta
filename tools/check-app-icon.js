@@ -14,12 +14,17 @@
  *   - The icon never reached the bundle. @electron/packager treats an icon
  *     path it cannot resolve as a warning, not an error (platform.js:159):
  *     it logs "skipping this app icon format" and packages the default.
- *     Worse, it never rewrites CFBundleIconFile -- mac.js:316 copies the
- *     configured icns *over* Contents/Resources/electron.icns -- so the
- *     packaged Info.plist reads `electron.icns` whether the icon was set or
- *     not. Nothing about the bundle's shape distinguishes the two cases.
- *     Comparing bytes is the only honest check, and that is what the arch
- *     mode below does.
+ *     Under Forge, even that warning never appears -- Forge's package step
+ *     calls packager with `quiet: true` (@electron-forge/core's
+ *     api/package.js:226), and packager's warning() only prints
+ *     `if (!quiet)` (common.js:32), so the one diagnostic that would have
+ *     said "your icon config is wrong" is unconditionally suppressed. And
+ *     packager never rewrites CFBundleIconFile either way -- mac.js:316
+ *     copies the configured icns *over* Contents/Resources/electron.icns --
+ *     so the packaged Info.plist reads `electron.icns` whether the icon was
+ *     set or not. Nothing about the bundle's shape, and nothing printed
+ *     during the build, distinguishes the two cases. Comparing bytes is the
+ *     only honest check, and that is what the arch mode below does.
  *
  * Usage:
  *
@@ -29,9 +34,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { decode } = require('./lib/png');
+const { slices } = require('./lib/icns');
 
 const ROOT = path.join(__dirname, '..');
 const ICNS = path.join(ROOT, 'assets', 'appIcon.icns');
+const PRODUCT_NAME = require(path.join(ROOT, 'package.json')).productName;
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -50,31 +57,6 @@ const COLOUR_TOLERANCE = 40;
 // floor there would fail on a correct icon.
 const COLOUR_CHECKED_FROM = 128;
 const REQUIRED_SIZES = [128, 256, 512, 1024];
-
-/**
- * Split an icns container into its slices.
- *
- * The format is a four-byte 'icns' magic, a big-endian total length, then a
- * flat run of chunks: four-byte type, big-endian length *including* the
- * eight-byte chunk header, then the payload.
- */
-function slices(buf) {
-  if (buf.toString('ascii', 0, 4) !== 'icns') throw new Error('not an icns file (bad magic)');
-  const declared = buf.readUInt32BE(4);
-  if (declared !== buf.length) {
-    throw new Error(`header declares ${declared} bytes but the file is ${buf.length}`);
-  }
-  const found = [];
-  let off = 8;
-  while (off + 8 <= buf.length) {
-    const type = buf.toString('ascii', off, off + 4);
-    const len = buf.readUInt32BE(off + 4);
-    if (len < 8 || off + len > buf.length) throw new Error(`slice '${type}' declares a bad length (${len})`);
-    found.push({ type, data: buf.subarray(off + 8, off + len) });
-    off += len;
-  }
-  return found;
-}
 
 /** Count drawn pixels, and pixels near each of the mark's colours. */
 function survey(img) {
@@ -106,24 +88,39 @@ const icns = fs.readFileSync(ICNS);
 const checked = [];
 const skipped = [];
 
+// A bad container is fatal on its own -- there is nothing left to survey --
+// so it gets its own try/catch and exits immediately. Per-slice decode
+// failures below are a different kind of problem: they are exactly the sort
+// of per-item finding `failures` exists to collect, and one bad slice must
+// not cost the report on every other slice, the REQUIRED_SIZES sweep, the
+// skipped-slices line, or (when an arch was given) the packaged-bundle
+// check that runs after this loop.
+let parsed;
 try {
-  for (const { type, data } of slices(icns)) {
-    // Slice type codes are not hardcoded on purpose. iconutil picks between
-    // icp4, is32/s8mk and friends for the small sizes and that choice is
-    // Apple's to change; what matters is the picture inside. Anything that
-    // is not a PNG is skipped, and REQUIRED_SIZES below is what stops that
-    // leniency from hollowing the check out.
-    //
-    // On macOS 26 / iconutil as of 2026-08 this leaves ic04, ic05 (the
-    // 16px and 32px legacy slices, stored as raw pixel data behind an
-    // 'ARGB' magic rather than PNG-encoded) and the 'info' bookkeeping
-    // chunk unchecked, and decodes the rest.
-    if (!data.subarray(0, 8).equals(PNG_MAGIC)) {
-      skipped.push(type);
-      continue;
-    }
+  parsed = slices(icns);
+} catch (err) {
+  console.error(`FAIL ${path.relative(ROOT, ICNS)}: ${err.message}`);
+  process.exit(1);
+}
 
-    const before = failures.length;
+for (const { type, data } of parsed) {
+  // Slice type codes are not hardcoded on purpose. iconutil picks between
+  // icp4, is32/s8mk and friends for the small sizes and that choice is
+  // Apple's to change; what matters is the picture inside. Anything that
+  // is not a PNG is skipped, and REQUIRED_SIZES below is what stops that
+  // leniency from hollowing the check out.
+  //
+  // On macOS 26 / iconutil as of 2026-08 this leaves ic04, ic05 (the
+  // 16px and 32px legacy slices, stored as raw pixel data behind an
+  // 'ARGB' magic rather than PNG-encoded) and the 'info' bookkeeping
+  // chunk unchecked, and decodes the rest.
+  if (!data.subarray(0, 8).equals(PNG_MAGIC)) {
+    skipped.push(type);
+    continue;
+  }
+
+  const before = failures.length;
+  try {
     const { w, h, img } = decode(data);
     if (w !== h) failures.push(`slice '${type}' is ${w}x${h}, not square`);
 
@@ -151,12 +148,23 @@ try {
     // Only claim ok if this slice added no failures of its own.
     if (failures.length === before) {
       const colours = MARK_COLOURS.map((c) => `${c.name} ${((hits.get(c.name) / total) * 100).toFixed(1)}%`).join(', ');
-      console.log(`ok  slice '${type}'  ${w}x${h}, ${(covered * 100).toFixed(1)}% drawn, ${colours}`);
+      // Below COLOUR_CHECKED_FROM the colour floors above never ran, so a
+      // 0.0% here is not evidence of anything -- but silently dropping the
+      // numbers would recreate, one level up, exactly the trap this script
+      // exists to defuse: a line that reads as fine while showing the
+      // failure's own symptom. Keeping them and marking the gap is also
+      // what keeps COLOUR_CHECKED_FROM honest -- the small-slice percentages
+      // printed on a real icon are the evidence that threshold is set where
+      // it should be.
+      const scope = w >= COLOUR_CHECKED_FROM ? '' : ` (colour not asserted below ${COLOUR_CHECKED_FROM}px)`;
+      console.log(`ok  slice '${type}'  ${w}x${h}, ${(covered * 100).toFixed(1)}% drawn, ${colours}${scope}`);
     }
+  } catch (err) {
+    // Same principle as above, one level down: one slice's decode error
+    // must not blot out every other slice's already-computed findings, and
+    // must keep the type that failed rather than blaming the whole file.
+    failures.push(`slice '${type}' failed to decode: ${err.message}`);
   }
-} catch (err) {
-  console.error(`FAIL ${path.relative(ROOT, ICNS)}: ${err.message}`);
-  process.exit(1);
 }
 
 for (const size of REQUIRED_SIZES) {
@@ -168,18 +176,19 @@ if (skipped.length > 0) console.log(`    (skipped non-PNG slices: ${skipped.join
 const arch = process.argv[2];
 if (arch) {
   const packaged = path.join(
-    ROOT, 'out', `Copy Pasta-darwin-${arch}`, 'Copy Pasta.app',
+    ROOT, 'out', `${PRODUCT_NAME}-darwin-${arch}`, `${PRODUCT_NAME}.app`,
     'Contents', 'Resources', 'electron.icns',
   );
+  const relPackaged = path.relative(ROOT, packaged);
   if (!fs.existsSync(packaged)) {
-    console.error(`no packaged app at ${packaged} -- run electron-forge make first`);
+    console.error(`no packaged app at ${relPackaged} -- run electron-forge package --arch=${arch} first`);
     process.exit(2);
   }
   // The default-icon case is a *different* file under the *same* name, so
   // only the bytes tell them apart.
   if (!fs.readFileSync(packaged).equals(icns)) {
     failures.push(
-      `${packaged} is not assets/appIcon.icns -- packager fell back to Electron's default, ` +
+      `${relPackaged} is not assets/appIcon.icns -- packager fell back to Electron's default, ` +
         'most likely because packagerConfig.icon does not resolve',
     );
   } else {
