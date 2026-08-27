@@ -143,8 +143,10 @@ slice whose payload is a PNG, decodes it and asserts three things:
 - it is the dimensions its slice type declares;
 - it is not blank — at least 15% of pixels are non-transparent, the floor `check-tray-icon.js`
   already uses;
-- **the mark's colours are present, not only the plate's.** Counting pixels within a small
-  tolerance of `#569CD6` and `#B5CEA8`, each must exceed 0.5% of the slice.
+- **the mark's colours are present, not only the plate's.** Counting pixels within 40 per channel
+  of `#569CD6` and `#B5CEA8`, each must exceed 0.5% of the slice. This assertion applies to slices
+  of 128 and above only. At 16 the whole mark is about eleven pixels and its green survives mostly
+  as blends toward the plate, so asserting a colour floor there would fail on a correct icon.
 
 That last assertion is the one that matters. If the SVG fails to load, Chrome still produces a
 perfectly good dark rounded square. That is a plausible-looking icon which would ship unnoticed; a
@@ -164,7 +166,16 @@ that distinguishes the two outcomes, because the filename and the plist entry ar
 way.
 
 The PNG decoder currently inline in `tools/check-tray-icon.js` moves to `tools/lib/png.js` and both
-scripts import it. It is lifted unchanged.
+scripts import it. The body is lifted unchanged; the signature widens from a file path to a
+`Buffer`, because the icns slices are already in memory and writing them back out to temp files
+just to read them again would be silly. `check-tray-icon.js` gains a `readFileSync` at its one call
+site.
+
+The check does not hardcode a table of icns slice type codes. `iconutil` chooses between `icp4`,
+`is32`/`s8mk` and similar for the small slices, and that choice is Apple's to change. Instead the
+script decodes every slice whose payload carries the PNG magic, records the dimensions it finds,
+and asserts that 128, 256, 512 and 1024 are all among them. That is robust to the type codes while
+still failing if a required slice goes missing.
 
 ## 7. Wiring
 
