@@ -108,8 +108,12 @@ asserts the mark's own blue and green are present, not merely that something
 was drawn.
 
 Given an arch, `check-app-icon.js` also compares the packaged bundle's copy of
-the icon byte for byte against `assets/appIcon.icns`, and `release.yml` runs
-it that way for both architectures. That comparison exists because a bad
+the icon byte for byte against `assets/appIcon.icns`. `release.yml` runs it
+that way for both architectures, and `ci.yml` runs it on every pull request
+against the arm64 package it already builds — catching a broken icon before a
+tag exists rather than after one is public. Passing an arch runs the
+source-mode slice assertions first, so a single invocation covers both the
+committed artifact and the build. That comparison exists because a bad
 `packagerConfig.icon` path produces no diagnostic at all: `@electron/packager`
 treats an unresolvable icon path as a warning rather than an error, and Forge
 suppresses even that warning by passing `quiet: true`. On top of that,
