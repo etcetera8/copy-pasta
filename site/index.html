@@ -35,15 +35,56 @@
           one keystroke away.
         </p>
 
-        <div class="hero__actions">
-          <a
-            class="btn btn--primary"
-            data-testid="download"
-            href="https://github.com/etcetera8/copy-pasta/releases/latest"
-          >
-            Download
-          </a>
-        </div>
+        <!-- A <details> rather than a scripted menu: this page ships no
+             JavaScript of its own, and a disclosure is the one interactive
+             control the platform gives for free -- keyboard-operable,
+             announced as expandable by screen readers, and working with
+             scripts disabled. The install steps below use the same element.
+
+             The links go to /releases/latest/download/<name>, a GitHub
+             redirect that resolves to the asset called <name> on whichever
+             release is newest, so nothing here needs touching per release.
+             It only holds while the names stay identical from release to
+             release, which is why release.yml strips the version out of
+             them -- site.test.ts pins the two files against each other.
+
+             Clicking one downloads without leaving the page: GitHub serves
+             release assets with `Content-Disposition: attachment`, so the
+             browser takes the file and the panel stays open. A `download`
+             attribute would do nothing -- it is ignored cross-origin -- so
+             it is left off rather than implying it is what does this. -->
+        <details class="download" data-testid="download">
+          <summary class="btn btn--primary download__summary">Download</summary>
+
+          <div class="download__panel">
+            <a
+              class="download__option"
+              data-testid="download-option"
+              href="https://github.com/etcetera8/copy-pasta/releases/latest/download/Copy-Pasta-arm64.dmg"
+            >
+              <span class="download__chip">Apple Silicon</span>
+              <span class="download__hint">M1, M2, M3, M4</span>
+            </a>
+
+            <a
+              class="download__option"
+              data-testid="download-option"
+              href="https://github.com/etcetera8/copy-pasta/releases/latest/download/Copy-Pasta-x64.dmg"
+            >
+              <span class="download__chip">Intel</span>
+              <span class="download__hint">Macs from 2020 and earlier</span>
+            </a>
+
+            <!-- Stated approximately on purpose. An exact size is wrong the
+                 next time a release is cut, and nothing in the build would
+                 notice. -->
+            <p class="download__help">
+              Not sure which you have? Open the Apple menu &rarr;
+              <strong>About This Mac</strong> and read the chip. Either build
+              is about 120&nbsp;MB.
+            </p>
+          </div>
+        </details>
 
         <p class="hero__platform">For macOS — Apple Silicon and Intel</p>
 

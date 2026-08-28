@@ -18,10 +18,11 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      # The DMG filenames come from package.json, not from the tag, so a tag
-      # that disagrees produces a release named v1.1.0 full of 1.0.0 files.
-      # Nothing downstream fails, and by then the tag is already public --
-      # so check before the ten-minute build rather than after.
+      # The app's version comes from package.json, not from the tag, so a tag
+      # that disagrees produces a release named v1.1.0 holding the 1.0.0 app.
+      # Nothing downstream fails, and since the assets are renamed to drop the
+      # version there is no filename left to give it away either. By then the
+      # tag is already public -- so check before the ten-minute build.
       - name: Tag must match package.json version
         run: |
           tag="${GITHUB_REF_NAME#v}"
@@ -84,6 +85,24 @@ jobs:
           rm -f out/make/*.dmg
           npx --no-install electron-forge make --arch=arm64 --skip-package
           npx --no-install electron-forge make --arch=x64 --skip-package
+
+      # The landing page links straight at
+      # /releases/latest/download/Copy-Pasta-<arch>.dmg, a redirect that only
+      # resolves while the asset name is identical in every release -- so the
+      # version has to come out of the filename. Forge cannot do this itself:
+      # MakerDMG's `name` is also the mounted volume's name, and it is one
+      # static string shared by both arch builds, which land in the same
+      # uncleared out/make and would overwrite each other.
+      #
+      # After the repackage step, which deletes and remakes the DMGs.
+      # site.test.ts pins these names against the page's hrefs.
+      - name: Name the DMGs for the permanent download links
+        run: |
+          for arch in arm64 x64; do
+            files=(out/make/*-"$arch".dmg)
+            [ ${#files[@]} -eq 1 ] || { echo "expected one $arch dmg, got: ${files[*]}"; exit 1; }
+            mv "${files[0]}" "out/make/Copy-Pasta-$arch.dmg"
+          done
 
       - name: Publish release
         uses: softprops/action-gh-release@v2

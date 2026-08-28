@@ -69,20 +69,77 @@ main {
     font-size: 20px;
   }
 
-  &__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    justify-content: center;
-    margin-top: 36px;
-  }
-
   &__platform {
     margin-top: 20px;
     font-size: 14px;
     opacity: 0.6;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+  }
+}
+
+// The download chooser. A <details>, so the panel opens with no JavaScript;
+// the summary is the hero's one button and carries .btn's styling.
+.download {
+  margin: 36px auto 0;
+  max-width: 420px;
+
+  // Removes the disclosure triangle. It reads as a button, so a marker
+  // pointing sideways next to the word "Download" is noise -- and Safari
+  // needs the -webkit- pseudo-element as well as `list-style`.
+  // .btn makes this inline-block, so .hero's text-align centres it.
+  &__summary {
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+
+  &__panel {
+    margin-top: 16px;
+    border: 1px solid rgba(tokens.$blue, 0.25);
+    padding: 8px;
+    text-align: left;
+  }
+
+  // One row per build. A block-level link so the whole row is the target,
+  // not just the words in it.
+  &__option {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    text-decoration: none;
+    color: tokens.$green;
+    transition: background 0.2s;
+
+    &:hover,
+    &:focus-visible {
+      background: rgba(tokens.$green, 0.12);
+    }
+  }
+
+  &__chip {
+    font-weight: bold;
+    font-size: 17px;
+  }
+
+  &__hint {
+    font-size: 13px;
+    color: tokens.$blue;
+    opacity: 0.7;
+    text-align: right;
+  }
+
+  &__help {
+    margin: 4px 0 0;
+    padding: 12px 14px 6px;
+    border-top: 1px solid rgba(tokens.$blue, 0.2);
+    font-size: 13px;
+    line-height: 1.6;
+    opacity: 0.75;
   }
 }
 

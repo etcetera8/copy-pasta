@@ -56,8 +56,16 @@ It ships no JavaScript of its own and shares the app's palette through
 
 Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds a DMG
 for both Apple Silicon and Intel, ad-hoc signs them, and attaches them to a
-GitHub release. The landing page's download button points at
-`releases/latest`.
+GitHub release.
+
+The workflow strips the version out of the DMG filenames before uploading, so
+every release carries assets called exactly `Copy-Pasta-arm64.dmg` and
+`Copy-Pasta-x64.dmg`. That is what lets the landing page link straight at
+`releases/latest/download/Copy-Pasta-arm64.dmg` — a redirect GitHub resolves
+to the newest release — instead of sending visitors to the releases page to
+find the files themselves. Rename those assets and the download links start
+returning 404 with nothing else failing, so `site/site.test.ts` checks the
+workflow's names against the page's links.
 
 ```bash
 git tag v1.0.0 && git push origin v1.0.0

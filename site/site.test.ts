@@ -16,7 +16,16 @@ import { beforeAll, describe, expect, it } from 'vitest';
  * These tests parse index.html and assert that contract.
  */
 
-const DOWNLOAD_URL = 'https://github.com/etcetera8/copy-pasta/releases/latest';
+/**
+ * `/releases/latest/download/<name>` is a GitHub redirect to the asset called
+ * <name> on whichever release is newest. It resolves forever, but only while
+ * <name> stays identical from release to release -- which is why the version
+ * is stripped out of the DMG filenames in release.yml.
+ */
+const DOWNLOAD_BASE =
+  'https://github.com/etcetera8/copy-pasta/releases/latest/download';
+const ASSET_NAMES = ['Copy-Pasta-arm64.dmg', 'Copy-Pasta-x64.dmg'];
+
 const BMC_SRC = 'https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js';
 const BMC_SLUG = 'etcetera8';
 
@@ -28,10 +37,59 @@ beforeAll(() => {
 });
 
 describe('landing page', () => {
-  it('offers a download that points at the releases page', () => {
-    const link = doc.querySelector('[data-testid="download"]');
-    expect(link).not.toBeNull();
-    expect(link?.getAttribute('href')).toBe(DOWNLOAD_URL);
+  /**
+   * The button used to be a link to the releases page, where the files sit
+   * behind a collapsed "Assets" fold under the changelog. It offers the two
+   * Mac builds directly now, so a visitor never has to read that page.
+   */
+  it('offers both Mac builds as direct downloads', () => {
+    const chooser = doc.querySelector('[data-testid="download"]');
+    expect(chooser).not.toBeNull();
+
+    const options = chooser!.querySelectorAll('[data-testid="download-option"]');
+    expect(Array.from(options).map((o) => o.getAttribute('href'))).toEqual(
+      ASSET_NAMES.map((name) => `${DOWNLOAD_BASE}/${name}`),
+    );
+  });
+
+  /**
+   * "arm64" and "x64" are the filenames' words, not the reader's. Someone who
+   * does not already know which they own cannot pick from them.
+   */
+  it('labels the builds the way the Mac does, and says where to look', () => {
+    const chooser = doc.querySelector('[data-testid="download"]');
+    const options = chooser!.querySelectorAll('[data-testid="download-option"]');
+
+    expect(options[0]?.textContent).toMatch(/Apple Silicon/);
+    expect(options[1]?.textContent).toMatch(/Intel/);
+    expect(chooser?.textContent).toMatch(/About This Mac/);
+  });
+
+  /**
+   * The two halves of the permanent-URL scheme live in different files: the
+   * page hardcodes the asset names, and release.yml produces them. Change the
+   * naming in the workflow and every check in the repo still passes -- the
+   * download links simply start returning 404, which nothing here would see.
+   *
+   * So the workflow's naming is read back and matched against the names the
+   * page asks for.
+   */
+  it('names the release assets exactly as the page links to them', () => {
+    const workflow = readFileSync(
+      join(__dirname, '..', '.github', 'workflows', 'release.yml'),
+      'utf8',
+    );
+
+    const target = workflow.match(/mv "\$\{files\[0\]\}" "out\/make\/(\S+?)"/)?.[1];
+    expect(
+      target,
+      'release.yml no longer renames the DMGs the way this test expects',
+    ).toBeDefined();
+
+    const produced = ['arm64', 'x64'].map((arch) =>
+      target!.replace('$arch', arch),
+    );
+    expect(produced).toEqual(ASSET_NAMES);
   });
 
   it('embeds the buy-me-a-coffee widget', () => {
