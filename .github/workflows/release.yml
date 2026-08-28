@@ -57,6 +57,16 @@ jobs:
           node tools/check-packaged-app.js arm64
           node tools/check-packaged-app.js x64
 
+      # A missing icon is invisible in the build log: packager treats an
+      # unresolvable path as a warning rather than an error, Forge suppresses
+      # even that with quiet: true, and the bundle's Info.plist names
+      # `electron.icns` either way. Only the bytes tell them apart.
+      - name: Check the app icon shipped
+        run: |
+          node tools/check-app-icon.js
+          node tools/check-app-icon.js arm64
+          node tools/check-app-icon.js x64
+
       # Not optional despite shipping unsigned: an arm64 binary with no
       # valid signature does not launch. This also seals the bundle
       # resources, which the linker's own signature does not cover.

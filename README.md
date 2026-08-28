@@ -72,18 +72,70 @@ valid signature will not launch at all.
 
 ## Icons
 
-There are two drawings of the pasta bowl, and they are not interchangeable:
+There are only two drawings of the pasta bowl, and they are not interchangeable:
 
 | File | Used for |
 |---|---|
-| `site/assets/bowl.svg` | The landing page hero **and** the browser tab icon |
+| `site/assets/bowl.svg` | The landing page hero, the browser tab icon, **and** the app icon |
 | `src/main/bowlTemplate.svg` | The menu-bar icon, via the PNGs beside it |
 
-`site/assets/bowl.svg` is one file referenced twice so the page and the tab
-cannot drift apart. Because a `<link rel="icon">` takes a URL, it is an `<img>`
-on the page rather than inline SVG, and a stylesheet cannot reach inside an
-image — so this one drawing carries its own colours as hex instead of taking
-them from the tokens. That is the single exception to the shared palette.
+`site/assets/bowl.svg` is one file referenced three times, so there is no
+second drawing to keep in step. Because a `<link rel="icon">` takes a URL, it
+is an `<img>` on the page rather than inline SVG, and a stylesheet cannot
+reach inside an image — so this one drawing carries its own colours as hex
+instead of taking them from the tokens. That is the single exception to the
+shared palette.
+
+The three references are not equally safe, though. The page and the tab cannot
+drift: both resolve the SVG at build time, and `site.test.ts` pins those
+references. The app icon can. `assets/appIcon.icns` is a committed raster, so
+editing the SVG without re-running the render leaves the icon silently stale
+and nothing catches it — the colour check below only asks that the old raster
+still contains the mark, and the byte comparison only proves the stale file
+reached the bundle. That is the accepted cost of committing the icon instead
+of generating it during the build, which is what keeps Chrome off CI's
+critical path.
+
+`assets/appIcon.icns` is the icon Finder shows for the packaged app, and it is
+generated, not drawn: `tools/render-app-icon.sh` renders `site/assets/bowl.svg`
+at seven sizes and composites a plate behind it, so there is no third drawing
+to keep in step with the other two. The plate's geometry — Apple's 824/1024
+grid, the plate rounded to an even pixel count so it centres exactly, a corner
+radius at 22.5% of it, and how much of the plate the mark spans — lives in that
+script's header rather than here, because it is derived and tuned there and
+would only go stale as a second copy.
+
+```bash
+./tools/render-app-icon.sh    # bowl.svg -> assets/appIcon.icns
+node tools/check-app-icon.js  # asserts the mark is in there, not just the plate
+```
+
+That check asserts more than "non-blank" on purpose. If Chrome fails to load
+the SVG — a cross-origin `file://` read, say — it still paints the plate, so
+the icon comes out as a clean dark rounded square at exactly the right size,
+which looks entirely deliberate rather than broken. That is why the check
+asserts the mark's own blue and green are present, not merely that something
+was drawn.
+
+Given an arch, `check-app-icon.js` also compares the packaged bundle's copy of
+the icon byte for byte against `assets/appIcon.icns`. `release.yml` runs it
+that way for both architectures, and `ci.yml` runs it on every pull request
+against the arm64 package it already builds — catching a broken icon before a
+tag exists rather than after one is public. Passing an arch runs the
+source-mode slice assertions first, so a single invocation covers both the
+committed artifact and the build. That comparison exists because a bad
+`packagerConfig.icon` path produces no diagnostic at all: `@electron/packager`
+treats an unresolvable icon path as a warning rather than an error, and Forge
+suppresses even that warning by passing `quiet: true`. On top of that,
+packager copies the icon over `Resources/electron.icns` and never rewrites
+`CFBundleIconFile`, so the packaged `Info.plist` reads `electron.icns`
+whether the icon was set correctly or not. This was verified by deliberately
+breaking the path: the result was a clean build, a valid DMG, and Electron's
+default icon, with nothing in the log to say so. Comparing bytes is the only
+honest check.
+
+Because the app hides its dock icon, this `.icns` is what the Applications
+folder, Spotlight, and the DMG window show — never a dock tile.
 
 The menu bar needs its own drawing rather than a scaled copy: at 16px the
 hero's 4–5px strokes land on about half a pixel and grey out. The template

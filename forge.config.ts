@@ -20,6 +20,12 @@ const config: ForgeConfig = {
   // `node-gyp-build` is robotjs's runtime loader -- it picks the right
   // prebuild for the arch -- so it has to come along too.
   packagerConfig: {
+    // Relative to the project root, which is where Forge runs. Note that a
+    // path packager cannot resolve is only a warning -- it logs "skipping
+    // this app icon format" and packages Electron's default -- so a typo
+    // here produces a perfectly green build with the wrong icon. That is
+    // what tools/check-app-icon.js exists to catch.
+    icon: 'assets/appIcon.icns',
     asar: true,
     ignore: (file: string): boolean => {
       if (!file) return false;
@@ -38,7 +44,10 @@ const config: ForgeConfig = {
   makers: [
     new MakerSquirrel({ name: 'pasta' }),
     new MakerZIP({}, ['darwin']),
-    new MakerDMG({ format: 'ULFO' }, ['darwin']),
+    // `icon` here is the mounted volume's icon, not the app's -- the app's
+    // comes from the bundle. Without it the disk that appears in Finder
+    // when someone opens the DMG is a generic white drive.
+    new MakerDMG({ format: 'ULFO', icon: 'assets/appIcon.icns' }, ['darwin']),
     new MakerDeb({}),
     new MakerRpm({}),
   ],

@@ -13,57 +13,12 @@
  *     white first, every pixel is opaque and the menu bar gets a solid block.
  *
  * Run after tools/render-tray-icon.sh. Reads the PNGs directly rather than
- * shelling out, so it needs nothing that is not already installed.
+ * shelling out, so it needs nothing that is not already installed -- the
+ * decoder in tools/lib/png.js is hand-rolled for that reason.
  */
 const fs = require('node:fs');
-const zlib = require('node:zlib');
 const path = require('node:path');
-
-function decode(file) {
-  const buf = fs.readFileSync(file);
-  let off = 8;
-  let hdr = null;
-  const idat = [];
-  while (off < buf.length) {
-    const len = buf.readUInt32BE(off);
-    const type = buf.toString('ascii', off + 4, off + 8);
-    if (type === 'IHDR') {
-      hdr = { w: buf.readUInt32BE(off + 8), h: buf.readUInt32BE(off + 12), depth: buf[off + 16], color: buf[off + 17] };
-    }
-    if (type === 'IDAT') idat.push(buf.subarray(off + 8, off + 8 + len));
-    off += 12 + len;
-  }
-  if (!hdr) throw new Error(`${file}: no IHDR`);
-  if (hdr.color !== 6 || hdr.depth !== 8) throw new Error(`${file}: expected 8-bit RGBA, got colour type ${hdr.color} depth ${hdr.depth}`);
-
-  const raw = zlib.inflateSync(Buffer.concat(idat));
-  const bpp = 4;
-  const stride = hdr.w * bpp;
-  const img = Buffer.alloc(hdr.h * stride);
-  // Undo the per-scanline filter each row carries in its leading byte.
-  for (let y = 0; y < hdr.h; y++) {
-    const filter = raw[y * (stride + 1)];
-    const line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
-    for (let x = 0; x < stride; x++) {
-      const a = x >= bpp ? img[y * stride + x - bpp] : 0;
-      const b = y > 0 ? img[(y - 1) * stride + x] : 0;
-      const c = x >= bpp && y > 0 ? img[(y - 1) * stride + x - bpp] : 0;
-      let v = line[x];
-      if (filter === 1) v += a;
-      else if (filter === 2) v += b;
-      else if (filter === 3) v += (a + b) >> 1;
-      else if (filter === 4) {
-        const p = a + b - c;
-        const pa = Math.abs(p - a);
-        const pb = Math.abs(p - b);
-        const pc = Math.abs(p - c);
-        v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
-      }
-      img[y * stride + x] = v & 255;
-    }
-  }
-  return { ...hdr, img, stride };
-}
+const { decode } = require('./lib/png');
 
 const root = path.join(__dirname, '..');
 const targets = [
@@ -75,7 +30,7 @@ let failed = false;
 for (const { file, size } of targets) {
   const rel = path.relative(root, file);
   try {
-    const { w, h, img } = decode(file);
+    const { w, h, img } = decode(fs.readFileSync(file));
     if (w !== size || h !== size) throw new Error(`expected ${size}x${size}, got ${w}x${h}`);
 
     let opaque = 0;

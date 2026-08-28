@@ -39,3 +39,17 @@ jobs:
 
       - name: Check the package is startable
         run: node tools/check-packaged-app.js arm64
+
+      # Same reasoning as the startability guard above: a wrong icon produces
+      # no build error and no crash. Packager treats an unresolvable
+      # packagerConfig.icon as a warning rather than an error, Forge
+      # suppresses even that with quiet: true, and the bundle's Info.plist
+      # names `electron.icns` either way -- so only comparing bytes tells a
+      # real icon from Electron's default.
+      #
+      # Here rather than only in release.yml because catching it on the tag
+      # would mean discovering it after the tag is public. Passing the arch
+      # runs the source-mode assertions too, so one invocation covers both
+      # the committed artifact and the bundle that just got built.
+      - name: Check the app icon shipped
+        run: node tools/check-app-icon.js arm64
